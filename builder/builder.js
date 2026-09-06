@@ -1407,10 +1407,11 @@ async function onClick(e) {
 }
 
 function bind() {
-  const body = $("b-body");
-  body.addEventListener("input", onInput);
-  body.addEventListener("change", onChange);
-  body.addEventListener("click", onClick);
+  // 事件委托必须挂在 document 上：步骤条(#b-steps)与底部导航(#b-nav)
+  // 是 #b-body 的兄弟节点，只绑 #b-body 会漏掉它们（曾经的导航全灭 bug）
+  document.addEventListener("input", onInput);
+  document.addEventListener("change", onChange);
+  document.addEventListener("click", onClick);
 }
 
 /* ================================================================
@@ -1490,6 +1491,89 @@ async function runE2E() {
   document.body.appendChild(pre);
 }
 
+/* UI 真实流程自检（?uidebug=1）：绑定事件、逐步骤渲染、真实派发点击 */
+window.addEventListener("unhandledrejection", (event) => {
+  window.__builderErrors = window.__builderErrors || [];
+  window.__builderErrors.push("unhandled:" + (event.reason && event.reason.message ? event.reason.message : String(event.reason)));
+});
+
+async function runUIDebug() {
+  const log = [];
+  const push = (msg) => log.push(msg);
+  // 统计真实点击是否到达 body（捕获阶段）
+  let bodyClickCount = 0;
+  const counter = () => {
+    bodyClickCount += 1;
+  };
+  try {
+    bind();
+    document.body.addEventListener("click", counter, true);
+    state.draft = sampleDraft();
+    state.stopOpen.clear();
+    state.step = 0;
+    renderAll();
+    push("boot:body=" + ($("b-body").textContent || "").trim().slice(0, 40).replace(/\n/g, " "));
+
+    // 探测欢迎页主按钮是否被遮挡（真实命中测试）
+    probe(push, "欢迎start", '[data-act="start"][data-mode="sample"]');
+
+    // 真实点击「从示例旅程开始」
+    const startBtn = document.querySelector('[data-act="start"][data-mode="sample"]');
+    if (startBtn) startBtn.click();
+    await new Promise((r) => setTimeout(r, 50));
+    push("afterStart:step=" + state.step + " clicks=" + bodyClickCount);
+
+    // 探测 basic 步导航按钮是否被遮挡
+    probe(push, "nav下一步", '.b-nav [data-act="goto"]');
+
+    // 依次点步骤条每个标签
+    const gotoSteps = [1, 2, 3, 4];
+    for (const s of gotoSteps) {
+      const btn = document.querySelector(`[data-act="goto"][data-step="${s}"]`);
+      push(
+        `g${s}btn=` +
+          (btn
+            ? "found disabled=" + btn.disabled + " aria=" + btn.getAttribute("aria-disabled")
+            : "NOTFOUND"),
+      );
+      if (btn) {
+        const before = state.step;
+        btn.click();
+        await new Promise((r) => setTimeout(r, 30));
+        push(`goto${s}:step ${before}->${state.step} clicks=${bodyClickCount}`);
+      }
+    }
+    push("finalStep=" + state.step);
+  } catch (err) {
+    push("ERR:" + err.message);
+    console.error(err);
+  }
+  document.body.removeEventListener("click", counter, true);
+  const report = {
+    log,
+    errors: window.__builderErrors || [],
+  };
+  const pre = document.createElement("pre");
+  pre.id = "builder-ui-report";
+  pre.textContent = JSON.stringify(report);
+  document.body.appendChild(pre);
+}
+
+function probe(push, label, selector) {
+  const el = document.querySelector(selector);
+  if (!el) {
+    push(`${label}: NO EL`);
+    return;
+  }
+  const rect = el.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const top = document.elementFromPoint(cx, cy);
+  push(
+    `${label}: rect=${Math.round(rect.left)},${Math.round(rect.top)} ${Math.round(rect.width)}x${Math.round(rect.height)} topEl=${top ? top.tagName + "." + (top.className || "").toString().slice(0, 40) : "NONE"} inside=${top === el || (top && el.contains(top))}`,
+  );
+}
+
 /* ---------- 启动 ---------- */
 loadDraft();
 const qParams = new URLSearchParams(location.search);
@@ -1497,6 +1581,8 @@ if (qParams.get("selftest") === "1") {
   runSelfTest();
 } else if (qParams.get("e2e") === "1") {
   runE2E();
+} else if (qParams.get("uidebug") === "1") {
+  runUIDebug();
 } else {
   bind();
   renderAll();
