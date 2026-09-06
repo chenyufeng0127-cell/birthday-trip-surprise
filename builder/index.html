@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>生日旅行 · 制作向导</title>
+    <meta name="description" content="选风格、写行程、放照片，几步做出一个可以发出去的惊喜旅程网页。" />
+    <link rel="stylesheet" href="builder.css" />
+  </head>
+  <body>
+    <header class="b-head">
+      <div class="b-head-inner">
+        <p class="b-brand">🎈 生日旅行 · 制作向导</p>
+        <p class="b-saved" id="b-saved">草稿自动保存在本机浏览器</p>
+      </div>
+    </header>
+
+    <nav class="b-steps" id="b-steps" aria-label="步骤"></nav>
+
+    <main class="b-body" id="b-body"></main>
+
+    <footer class="b-nav" id="b-nav"></footer>
+
+    <div class="b-toast" id="b-toast" role="status" aria-live="polite"></div>
+
+    <script src="template.inline.js"></script>
+    <script src="builder-media.js"></script>
+    <script src="builder.js"></script>
+  </body>
+</html>
