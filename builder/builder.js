@@ -480,25 +480,39 @@ function iconEmojiOf(icon) {
     : "";
 }
 
-/* 图标当前值预览：emoji 放大 / 内置图 / 上传贴纸（未读出的先占位） */
-function iconThumbHtml(icon) {
+/* 图标当前值预览：emoji 放大 / 内置图 / 上传贴纸。带 data-icon-thumb 标记，
+ * 清除/换选时可被 removeIconThumb() 移除，避免「清不掉」的假象 */
+function iconThumbHtml(icon, idx) {
+  const tag = `data-icon-thumb="${idx}"`;
   if (!icon) return "";
   if (icon.startsWith("emoji:")) {
     const c = icon.slice(6) || "😊";
-    return `<span class="b-flex" style="margin-bottom:8px"><b style="font-size:30px;line-height:1">${esc(c)}</b></span>`;
+    return `<span class="b-flex" style="margin-bottom:8px" ${tag}><b style="font-size:30px;line-height:1">${esc(c)}</b></span>`;
   }
   let src = "";
   if (icon.startsWith("m:")) src = SRC.media[icon.slice(2)] || "";
   else if (icon.startsWith("u:")) src = state.uiPhotoCache[icon.slice(2)] || "";
   if (!src) {
     if (icon.startsWith("u:")) {
-      return `<span class="b-flex" style="margin-bottom:8px"><i class="b-muted" style="font-size:12px" data-icon-u="${esc(icon.slice(2))}">正在读取贴纸…</i></span>`;
+      return `<span class="b-flex" style="margin-bottom:8px" ${tag}><i class="b-muted" style="font-size:12px" data-icon-u="${esc(icon.slice(2))}">正在读取贴纸…</i></span>`;
     }
     return "";
   }
-  return `<span class="b-flex" style="margin-bottom:8px">
+  return `<span class="b-flex" style="margin-bottom:8px" ${tag}>
     <img src="${esc(src)}" alt="" style="width:52px;height:52px;object-fit:cover;border-radius:14px;border:2px solid #fff;box-shadow:0 4px 10px rgba(120,97,88,.18)" />
   </span>`;
+}
+
+function stopIndexFromPathIcon(path) {
+  const m = String(path).match(/^stops\.(\d+)\.icon$/);
+  return m ? Number(m[1]) : -1;
+}
+
+/* 移除某站的图标预览块（选择变化/清除时调用） */
+function removeIconThumb(idx) {
+  document
+    .querySelectorAll(`[data-icon-thumb="${idx}"]`)
+    .forEach((el) => el.remove());
 }
 
 function renderStops(body) {
@@ -583,7 +597,7 @@ function renderStops(body) {
           </div>
           <div class="b-field"><label>站图标（地图上的小图标）</label>
             <div class="b-pick">
-              ${iconThumbHtml(stop.icon)}
+              ${iconThumbHtml(stop.icon, i)}
               ${iconChips}
               <span class="b-flex" style="width:100%">
                 <input class="b-input" style="flex:1;min-width:0" data-icon-emoji="${i}" placeholder="或用 emoji，如 🍜 🚗 🎆" value="${esc(iconEmojiOf(stop.icon))}" maxlength="6" />
@@ -1156,11 +1170,20 @@ function onInput(e) {
   if (!t.dataset) return;
   // 站图标：输入 emoji
   if (t.dataset.iconEmoji !== undefined) {
-    const stop = (state.draft.stops || [])[Number(t.dataset.iconEmoji)];
+    const idx = Number(t.dataset.iconEmoji);
+    const stop = (state.draft.stops || [])[idx];
     if (stop) {
       const v = t.value.trim();
       if (v) stop.icon = "emoji:" + v;
       else if (stop.icon && stop.icon.startsWith("emoji:")) stop.icon = "";
+      // 同步：取消内置图标高亮、移除旧的图标预览块（输入框本身即所见）
+      const picker = t.closest(".b-pick");
+      if (picker) {
+        picker
+          .querySelectorAll(".b-pick-item")
+          .forEach((c) => c.classList.remove("is-on"));
+      }
+      removeIconThumb(idx);
       scheduleSave();
     }
     return;
@@ -1396,10 +1419,11 @@ async function onClick(e) {
         .querySelectorAll(".b-pick-item")
         .forEach((c) => c.classList.remove("is-on"));
       btn.classList.add("is-on");
-      // 站点选了内置图标时，清掉旁边的 emoji 输入
+      // 站点选了内置图标时，清掉旁边的 emoji 输入与旧预览
       if (path.endsWith(".icon")) {
         const emoji = container.querySelector("[data-icon-emoji]");
         if (emoji) emoji.value = "";
+        removeIconThumb(stopIndexFromPathIcon(path));
       }
     }
     thumbUpdateForPath(path, "m:" + key, btn.closest(".b-pick"));
@@ -1420,6 +1444,7 @@ async function onClick(e) {
       if (path.endsWith(".icon")) {
         const emoji = container.querySelector("[data-icon-emoji]");
         if (emoji) emoji.value = "";
+        removeIconThumb(stopIndexFromPathIcon(path));
       }
     }
     thumbUpdateForPath(path, "", btn.closest(".b-pick"));
