@@ -257,11 +257,9 @@ function renderNav() {
       <button class="b-btn b-btn-primary" data-act="download">💾 导出成品 HTML</button>
     </div>`;
   } else {
-    const noName =
-      id === "basic" && (!state.draft.hero || !state.draft.hero.name);
     inner = `<div class="b-nav-inner">
       <button class="b-btn b-btn-ghost" data-act="goto" data-step="${state.step - 1}">← 上一步</button>
-      <button class="b-btn b-btn-primary" data-act="goto" data-step="${state.step + 1}" ${noName ? "disabled" : ""}>下一步 →</button>
+      <button class="b-btn b-btn-primary" data-act="goto" data-step="${state.step + 1}">下一步 →</button>
     </div>`;
   }
   nav.innerHTML = inner;
