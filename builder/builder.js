@@ -241,11 +241,12 @@ function renderStep(body, stepId) {
   if (stepId === "preview") return renderPreview(body);
 }
 
-function rerenderCurrent() {
+function rerenderCurrent(keepScroll) {
+  const y = keepScroll ? window.scrollY : 0;
   const body = $("b-body");
   const stepId = STEPS[state.step].id;
   renderStep(body, stepId);
-  window.scrollTo(0, 0);
+  window.scrollTo(0, y);
 }
 
 function renderNav() {
@@ -1154,11 +1155,14 @@ async function handleUpload(input) {
     setByPath(d, path, "u:" + ids[0]);
     releasePhotoIfOrphan(oldRef); // 单图位被新照片顶掉时，旧图若孤儿则释放
   }
-  ids.forEach((id) => {
-    PhotoLib.getPhoto(id).then((dataUrl) => {
-      if (dataUrl) state.uiPhotoCache[id] = dataUrl;
-    });
-  });
+  // 先把新照片的缩略图全部读出来缓存，再渲染——保证添加后立刻能看到
+  await Promise.all(
+    ids.map((id) =>
+      PhotoLib.getPhoto(id).then((dataUrl) => {
+        if (dataUrl) state.uiPhotoCache[id] = dataUrl;
+      }),
+    ),
+  );
   scheduleSave();
   input.value = "";
   let storageNote = "";
@@ -1179,7 +1183,7 @@ async function handleUpload(input) {
   } else {
     toast("照片已添加 ✓" + storageNote);
   }
-  rerenderCurrent();
+  rerenderCurrent(true); // 保留滚动位置，用户就在刚刚添加的位置看到照片
   hydratePhotos();
 }
 
