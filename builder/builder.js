@@ -134,6 +134,7 @@ function cfgToDraft(cfg) {
     typeof value === "string" && media[value] ? "m:" + value : value;
   const draft = clone(cfg);
   draft.uid = cfg.uid || uid();
+  if (!["seaside", "forest", "starry"].includes(draft.theme)) draft.theme = "seaside";
   const days = [...new Set((cfg.stops || []).map((s) => s.day))];
   draft.days = days.length ? Math.max(...days) : 3;
   draft.page = draft.page || {};
@@ -167,10 +168,18 @@ function sampleDraft() {
   }
 }
 
+/* 成品风格主题 */
+const THEMES = [
+  { id: "seaside", label: "海边暖沙", note: "奶油粉与暖沙，海风一样轻", swatch: ["#f7c9cf", "#e58b9e", "#4f9aa0"] },
+  { id: "forest", label: "森林", note: "鼠尾草绿与焦糖，安静治愈", swatch: ["#dfe8d2", "#8aa668", "#5e9277"] },
+  { id: "starry", label: "星光夜", note: "薰衣草紫与月光金，浪漫入夜", swatch: ["#ddd2f1", "#8d7cc9", "#e0c190"] },
+];
+
 function blankDraft() {
   return {
     uid: uid(),
     days: 3,
+    theme: "seaside",
     page: { title: "", description: "一封在手机里慢慢展开的旅行邀请。" },
     hero: {
       name: "",
@@ -330,6 +339,24 @@ function renderBasic(body) {
     </div>
     <div class="b-field"><label>作品标题（浏览器标签 / 微信分享标题）</label>
       <input class="b-input" data-p="page.title" value="${esc(d.page.title || "")}" placeholder="留空自动生成" /></div>
+  </section>
+
+  <section class="b-card">
+    <h2>选一个风格</h2>
+    <div class="b-style-grid">
+      ${THEMES.map((t) => {
+        const on = (d.theme || "seaside") === t.id;
+        const dots = t.swatch
+          .map((c) => `<i style="background:${c}"></i>`)
+          .join("");
+        return `<button type="button" class="b-style-card${on ? " is-on" : ""}" data-act="theme-set" data-theme="${t.id}">
+          <span class="b-style-swatch" aria-hidden="true">${dots}</span>
+          <span class="b-style-name">${esc(t.label)}</span>
+          <span class="b-style-note">${esc(t.note)}</span>
+        </button>`;
+      }).join("")}
+    </div>
+    <p class="b-hint">在最后一步「预览与导出」里可实时查看效果，随时回来换。</p>
   </section>
 
   <section class="b-card">
@@ -951,6 +978,7 @@ async function draftToConfig(draft) {
     if (!s.id) s.id = uid();
   });
   cfg.copy = cfg.copy && Object.keys(cfg.copy).length ? cfg.copy : defaultCopy();
+  if (!["seaside", "forest", "starry"].includes(cfg.theme)) cfg.theme = "seaside";
   delete cfg.days;
   return cfg;
 }
@@ -1340,6 +1368,17 @@ async function onClick(e) {
     input.dataset.multi = btn.dataset.multi;
     input.addEventListener("change", () => handleUpload(input));
     input.click();
+    return;
+  }
+
+  if (act === "theme-set") {
+    state.draft.theme = btn.dataset.theme;
+    previewReady = false;
+    document
+      .querySelectorAll("[data-act='theme-set']")
+      .forEach((c) => c.classList.toggle("is-on", c === btn));
+    scheduleSave();
+    toast("风格已切换为「" + (THEMES.find((t) => t.id === btn.dataset.theme) || {}).label + "」——到「预览与导出」查看效果");
     return;
   }
 

@@ -16,6 +16,61 @@
   --font-ui: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB",
     "Microsoft YaHei", sans-serif;
   --font-serif: "Songti SC", "Noto Serif SC", "STSong", serif;
+  /* 页面外围底色 + 主按钮渐变（随主题切换） */
+  --bg: #e9e6df;
+  --grad1: #f28aa0;
+  --grad2: #f4a37c;
+  --grad3: #f7c27e;
+  --glow: rgba(229, 139, 158, 0.4);
+}
+
+/*
+ * 主题系统：向导里选了风格后，会给 <body> 打 data-theme 标记，
+ * 下面覆盖变量即可整套换色（样式全走变量，无需动组件规则）。
+ * seaside（海边暖沙）= 默认 :root 值，无需覆盖。
+ */
+body[data-theme="forest"] {
+  --paper: #fbf8ef;
+  --cream: #f4ecdc;
+  --blush: #dfe8d2;
+  --rose: #8aa668;
+  --rose-deep: #6b8a52;
+  --peach: #e0b98a;
+  --sand: #e2d2a8;
+  --aqua: #b6cdbb;
+  --sea: #5e9277;
+  --sea-deep: #3f6b52;
+  --ink: #3a413a;
+  --muted: #7c8375;
+  --line: rgba(96, 116, 82, 0.28);
+  --white: #fefdf7;
+  --bg: #e6e3d2;
+  --grad1: #9dbf78;
+  --grad2: #85a75f;
+  --grad3: #c8ad6e;
+  --glow: rgba(107, 138, 82, 0.35);
+}
+
+body[data-theme="starry"] {
+  --paper: #f6f3fb;
+  --cream: #ece4f5;
+  --blush: #ddd2f1;
+  --rose: #8d7cc9;
+  --rose-deep: #6b58ad;
+  --peach: #e6c79a;
+  --sand: #d6c7e4;
+  --aqua: #b6cbe9;
+  --sea: #5f7ebd;
+  --sea-deep: #415692;
+  --ink: #39334d;
+  --muted: #7a7291;
+  --line: rgba(106, 90, 160, 0.25);
+  --white: #fbf9ff;
+  --bg: #e5e1ee;
+  --grad1: #a795dd;
+  --grad2: #8d7cc9;
+  --grad3: #e0c190;
+  --glow: rgba(110, 89, 175, 0.32);
 }
 
 * {
@@ -31,7 +86,7 @@ html {
 
 body {
   min-width: 320px;
-  background: #e9e6df;
+  background: var(--bg);
   color: var(--ink);
   font-family: var(--font-ui);
   overflow-x: hidden;
@@ -114,9 +169,9 @@ img {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #f28aa0, #f4a37c 55%, #f7c27e);
+  background: linear-gradient(135deg, var(--grad1), var(--grad2) 55%, var(--grad3));
   color: #fffdfa;
-  box-shadow: 0 14px 30px rgba(229, 139, 158, 0.4);
+  box-shadow: 0 14px 30px var(--glow);
 }
 
 .btn-ghost {

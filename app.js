@@ -36,6 +36,18 @@ const params = new URLSearchParams(window.location.search);
 const isPreview = params.get("preview") === "1";
 const shouldReset = params.get("reset") === "1";
 
+/* 主题：config 里可选 seaside / forest / starry；URL ?theme= 可临时切换（调试用） */
+const THEME_ID = ["seaside", "forest", "starry"].includes(params.get("theme"))
+  ? params.get("theme")
+  : ["seaside", "forest", "starry"].includes(CFG.theme)
+    ? CFG.theme
+    : "seaside";
+try {
+  document.body.dataset.theme = THEME_ID;
+} catch (err) {
+  /* ignore */
+}
+
 const $ = (id) => document.getElementById(id);
 const screens = {
   cover: $("screen-cover"),

@@ -585,3 +585,51 @@ textarea.code {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 12px;
 }
+
+/* ---------- 风格选择卡 ---------- */
+.b-style-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.b-style-card {
+  border: 2px solid var(--bk-line);
+  border-radius: 14px;
+  background: #fff;
+  padding: 12px 10px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  text-align: left;
+}
+
+.b-style-card.is-on {
+  border-color: var(--bk-accent);
+}
+
+.b-style-swatch {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 6px;
+}
+
+.b-style-swatch i {
+  flex: 1;
+  height: 22px;
+  border-radius: 8px;
+  min-width: 0;
+}
+
+.b-style-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--bk-ink);
+}
+
+.b-style-note {
+  font-size: 11px;
+  color: var(--bk-muted);
+  line-height: 1.5;
+}

@@ -16,6 +16,7 @@ window.TRIP_CONFIG = {
    * ① 主角与基础信息
    * ============================================================== */
   uid: "my-birthday-trip", // 本地进度存档标识：换一次旅程就改一下，避免串档
+  theme: "seaside", // 风格主题：seaside 海边暖沙 / forest 森林 / starry 星光夜
 
   page: {
     title: "小星的生日旅行", // 浏览器标签页标题
