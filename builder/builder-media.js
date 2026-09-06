@@ -57,8 +57,9 @@
     if (modePromise) return modePromise;
     modePromise = (async () => {
       try {
-        const db = await openDb();
-        db.close();
+        // 注意：这里不能 db.close()——openDb 缓存的是同一个连接，
+        // 探测后关闭会让后续 transaction 报 "database connection is closing"
+        await openDb();
         mode = "idb";
         return mode;
       } catch (err) {
