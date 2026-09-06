@@ -3,8 +3,12 @@
  *
  * 职责：
  *   1. 把用户选的照片（手机相册 / 本地文件 / 拖拽）压缩成较小的 JPEG
- *   2. 存进浏览器本地数据库 IndexedDB（不联网、不上传）
+ *   2. 存进浏览器本地存储（三级自动降级）：
+ *        IndexedDB（推荐，容量大）→ localStorage（约 5MB）→ 仅本次会话内存
  *   3. 导出时再取出来内嵌进成品文件
+ *
+ * 有的浏览器 / 环境会拒绝 IndexedDB（如隐私模式、沙箱、某些浏览器设置），
+ * 这时照片库会自动降级而不是报错，保证照片能用、能导出。
  */
 
 (function (w) {
@@ -12,13 +16,18 @@
 
   const DB_NAME = "trip-builder-store";
   const STORE = "photos";
+  const LS_PREFIX = "trip-builder-photo:";
+
   let dbPromise = null;
+  let modePromise = null;
+  let mode = null;
+  const memStore = {};
 
   function openDb() {
     if (dbPromise) return dbPromise;
     dbPromise = new Promise((resolve, reject) => {
       if (!w.indexedDB) {
-        reject(new Error("当前浏览器不支持 IndexedDB，无法保存照片。"));
+        reject(new Error("浏览器不支持 IndexedDB"));
         return;
       }
       const req = indexedDB.open(DB_NAME, 1);
@@ -40,31 +49,93 @@
     });
   }
 
-  async function addPhoto(dataUrl) {
-    const id =
+  /*
+   * 探测可用存储：IndexedDB → localStorage → 内存。
+   * 结果缓存，只探测一次。
+   */
+  async function detectMode() {
+    if (modePromise) return modePromise;
+    modePromise = (async () => {
+      try {
+        const db = await openDb();
+        db.close();
+        mode = "idb";
+        return mode;
+      } catch (err) {
+        // IndexedDB 不可用（最常见是 context 被拒 / 隐私限制）
+      }
+      try {
+        const probe = LS_PREFIX + "probe";
+        localStorage.setItem(probe, "1");
+        localStorage.removeItem(probe);
+        mode = "local";
+        return mode;
+      } catch (err) {
+        // localStorage 也被拒
+      }
+      mode = "memory";
+      return mode;
+    })();
+    return modePromise;
+  }
+
+  function newId() {
+    return (
       "u_" +
       (w.crypto && w.crypto.randomUUID
         ? w.crypto.randomUUID()
-        : Date.now().toString(36) + Math.random().toString(36).slice(2));
-    const db = await openDb();
-    const tx = db.transaction(STORE, "readwrite");
-    tx.objectStore(STORE).put({ id, dataUrl });
-    await new Promise((resolve, reject) => {
-      tx.oncomplete = resolve;
-      tx.onerror = () => reject(tx.error);
-    });
+        : Date.now().toString(36) + Math.random().toString(36).slice(2))
+    );
+  }
+
+  async function addPhoto(dataUrl) {
+    const id = newId();
+    const m = await detectMode();
+    if (m === "idb") {
+      const db = await openDb();
+      const tx = db.transaction(STORE, "readwrite");
+      tx.objectStore(STORE).put({ id, dataUrl });
+      await new Promise((resolve, reject) => {
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error);
+      });
+    } else if (m === "local") {
+      try {
+        localStorage.setItem(LS_PREFIX + id, dataUrl);
+      } catch (err) {
+        throw new Error(
+          "本地存储空间不足（约 5MB 上限）——请少放几张照片，或改用 Chrome / Edge 打开本页以获得更大存储",
+        );
+      }
+    } else {
+      memStore[id] = dataUrl;
+    }
     return id;
   }
 
   async function getPhoto(id) {
-    const db = await openDb();
-    const result = await reqDone(db.transaction(STORE, "readonly").objectStore(STORE).get(id));
-    return result ? result.dataUrl : null;
+    const m = await detectMode();
+    if (m === "idb") {
+      const db = await openDb();
+      const result = await reqDone(
+        db.transaction(STORE, "readonly").objectStore(STORE).get(id),
+      );
+      return result ? result.dataUrl : null;
+    }
+    if (m === "local") return localStorage.getItem(LS_PREFIX + id);
+    return memStore[id] || null;
   }
 
   async function removePhoto(id) {
-    const db = await openDb();
-    await reqDone(db.transaction(STORE, "readwrite").objectStore(STORE).delete(id));
+    const m = await detectMode();
+    if (m === "idb") {
+      const db = await openDb();
+      await reqDone(db.transaction(STORE, "readwrite").objectStore(STORE).delete(id));
+    } else if (m === "local") {
+      localStorage.removeItem(LS_PREFIX + id);
+    } else {
+      delete memStore[id];
+    }
   }
 
   function loadImage(file) {
@@ -109,14 +180,14 @@
   // 把失败原因翻译成人话
   function friendlyError(file, err) {
     const msg = String((err && err.message) || err);
-    if (/SecurityError|安全/i.test(msg)) {
-      return "浏览器禁止保存照片——请用 start.command 启动器以 http:// 方式打开本页，不要直接双击文件，再试一次";
-    }
-    if (/decode|无法解码|decode failed|FORMAT/i.test(msg)) {
+    if (/decode|无法解码/i.test(msg)) {
       return "「" + file.name + "」格式无法解码（可能是 HEIC 等），请转成 JPG/PNG 再试";
     }
-    if (/IndexedDB|openDb|照片库/i.test(msg)) {
-      return "浏览器本地照片库不可用（" + msg + "），请换 Chrome/Edge，或用启动器 http:// 方式打开";
+    if (/空间不足|quota|Quota/i.test(msg)) {
+      return msg;
+    }
+    if (/IndexedDB|denied|deny|SecurityError|存储|IDBFactory/i.test(msg)) {
+      return "当前浏览器环境不允许大容量本地存储，已自动切换轻量模式，照片仍可使用；长期保存建议用 Chrome / Edge 的普通窗口打开";
     }
     return "「" + file.name + "」处理失败：" + msg;
   }
@@ -142,11 +213,23 @@
     return { added, failed };
   }
 
+  /* 给界面用的存储模式说明 */
+  const MODE_LABEL = {
+    idb: "正常",
+    local: "轻量（约 5MB 上限）",
+    memory: "仅本次会话（浏览器禁止本地存储）",
+  };
+  function modeLabel(m) {
+    return MODE_LABEL[m] || m;
+  }
+
   w.PhotoLib = {
     addPhoto,
     getPhoto,
     removePhoto,
     fileToDataUrl,
     filesToPhotos,
+    detectMode,
+    modeLabel,
   };
 })(window);

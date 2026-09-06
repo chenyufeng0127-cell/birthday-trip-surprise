@@ -1156,13 +1156,43 @@ async function handleUpload(input) {
   });
   scheduleSave();
   input.value = "";
+  let storageNote = "";
+  try {
+    const m = await PhotoLib.detectMode();
+    if (m !== "idb") {
+      storageNote = "（本浏览器存储受限，照片按「" + PhotoLib.modeLabel(m) + "」保存）";
+    }
+    updateStorageLabel();
+  } catch (err) {
+    /* ignore */
+  }
   if (failed.length) {
-    toast("已添加 " + ids.length + " 张，另有 " + failed.length + " 张失败：" + failed[0].reason);
+    toast(
+      "已添加 " + ids.length + " 张，另有 " + failed.length + " 张失败：" +
+        failed[0].reason,
+    );
   } else {
-    toast("照片已添加 ✓");
+    toast("照片已添加 ✓" + storageNote);
   }
   rerenderCurrent();
   hydratePhotos();
+}
+
+/* 顶栏显示照片存储模式（IndexedDB 正常 / localStorage 轻量 / 仅本次会话） */
+async function updateStorageLabel() {
+  const el = $("b-saved");
+  if (!el) return;
+  try {
+    const m = await PhotoLib.detectMode();
+    el.textContent =
+      m === "idb"
+        ? "草稿与照片自动保存在本机浏览器"
+        : "草稿保存在本机 · 照片存储：" +
+          PhotoLib.modeLabel(m) +
+          "（换 Chrome/Edge 普通窗口可获得更大存储）";
+  } catch (err) {
+    /* ignore */
+  }
 }
 
 async function onClick(e) {
@@ -1670,4 +1700,5 @@ if (qParams.get("selftest") === "1") {
   }
   bind();
   renderAll();
+  updateStorageLabel();
 }
