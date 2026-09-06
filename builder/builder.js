@@ -334,12 +334,19 @@ function renderBasic(body) {
 
   <section class="b-card">
     <h2>旅程安排</h2>
-    <div class="b-field"><label>一共几天？</label>
-      <select class="b-select" data-p="days" data-num="1">
-        ${Array.from({ length: 10 }, (_, i) => `<option value="${i + 1}" ${(d.days || 3) === i + 1 ? "selected" : ""}>${i + 1} 天</option>`).join("")}
-      </select></div>
+    <div class="b-row" style="align-items:flex-end">
+      <div class="b-field"><label>一共几天？</label>
+        <select class="b-select" data-days-preset>
+          ${Array.from({ length: 10 }, (_, i) => `<option value="${i + 1}" ${(d.days || 3) === i + 1 ? "selected" : ""}>${i + 1} 天</option>`).join("")}
+          <option value="custom" ${(d.days || 3) > 10 ? "selected" : ""}>自定义（超过 10 天）…</option>
+        </select></div>
+      <div class="b-field" data-days-custom-field style="${(d.days || 3) > 10 ? "" : "display:none"}">
+        <label>自定义天数（最多 30）</label>
+        <input class="b-input" type="number" min="1" max="30" data-days-custom value="${(d.days || 3) > 10 ? d.days : ""}" placeholder="如 12" />
+      </div>
+    </div>
     <div class="b-flex" style="align-items:flex-end">${daysInputs}</div>
-    <p class="b-hint">接着到「行程与文案」里按天添加每一站。</p>
+    <p class="b-hint">接着到「行程与文案」里按天添加每一站。改天数不会删掉已有站点。</p>
   </section>
 
   <section class="b-card">
@@ -1099,6 +1106,30 @@ function onChange(e) {
     handleUpload(t);
     return;
   }
+  if (t.dataset.daysPreset !== undefined) {
+    // 旅程天数：预设下拉 或 自定义
+    if (t.value === "custom") {
+      const customField = document.querySelector("[data-days-custom-field]");
+      const customInput = document.querySelector("[data-days-custom]");
+      if (customField) customField.style.display = "";
+      if (customInput) customInput.focus();
+      return;
+    }
+    setTripDays(Number(t.value));
+    return;
+  }
+  if (t.dataset.daysCustom !== undefined) {
+    // 自定义天数输入框（blur/回车时收口并刷新界面）
+    const raw = String(t.value || "").trim();
+    const n = Math.round(Number(raw));
+    if (raw === "" || Number.isNaN(n) || n < 1) {
+      // 清空或非法：恢复显示当前天数
+      if (t.value === "") setTripDays(state.draft.days);
+      return;
+    }
+    setTripDays(n);
+    return;
+  }
   if (t.type === "checkbox" && t.dataset.p !== undefined) {
     setByPath(state.draft, t.dataset.p, t.checked);
     scheduleSave();
@@ -1108,14 +1139,6 @@ function onChange(e) {
     let value = t.value;
     if (t.dataset.num === "1") value = Number(value);
     setByPath(state.draft, t.dataset.p, value);
-    if (t.dataset.p === "days") {
-      Object.keys(state.draft.dayDates || {}).forEach((k) => {
-        if (Number(k) > value) delete state.draft.dayDates[k];
-      });
-      scheduleSave();
-      rerenderCurrent();
-      return;
-    }
     // 修改了某站 day，标题同步
     const card = t.closest(".b-stop");
     if (card && t.dataset.p.endsWith(".day")) {
@@ -1123,6 +1146,22 @@ function onChange(e) {
       if (badge) badge.textContent = "DAY " + value;
     }
     scheduleSave();
+  }
+}
+
+/* 设置旅程天数（1-30），自动清理超出的日期标签并重绘 */
+function setTripDays(n) {
+  const value = Math.min(30, Math.max(1, Math.round(n) || 1));
+  state.draft.days = value;
+  Object.keys(state.draft.dayDates || {}).forEach((k) => {
+    if (Number(k) > value) delete state.draft.dayDates[k];
+  });
+  scheduleSave();
+  rerenderCurrent(true); // 保留滚动位置
+  // 若天数回到 1-10，收起自定义输入框
+  if (value <= 10) {
+    const field = document.querySelector("[data-days-custom-field]");
+    if (field) field.style.display = "none";
   }
 }
 
