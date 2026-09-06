@@ -341,8 +341,8 @@ function renderBasic(body) {
           <option value="custom" ${(d.days || 3) > 10 ? "selected" : ""}>自定义（超过 10 天）…</option>
         </select></div>
       <div class="b-field" data-days-custom-field style="${(d.days || 3) > 10 ? "" : "display:none"}">
-        <label>自定义天数（最多 30）</label>
-        <input class="b-input" type="number" min="1" max="30" data-days-custom value="${(d.days || 3) > 10 ? d.days : ""}" placeholder="如 12" />
+        <label>自定义天数（最多 21）</label>
+        <input class="b-input" type="number" min="1" max="21" data-days-custom value="${(d.days || 3) > 10 ? d.days : ""}" placeholder="如 12" />
       </div>
     </div>
     <div class="b-flex" style="align-items:flex-end">${daysInputs}</div>
@@ -1151,7 +1151,7 @@ function onChange(e) {
 
 /* 设置旅程天数（1-30），自动清理超出的日期标签并重绘 */
 function setTripDays(n) {
-  const value = Math.min(30, Math.max(1, Math.round(n) || 1));
+  const value = Math.min(21, Math.max(1, Math.round(n) || 1));
   state.draft.days = value;
   Object.keys(state.draft.dayDates || {}).forEach((k) => {
     if (Number(k) > value) delete state.draft.dayDates[k];
