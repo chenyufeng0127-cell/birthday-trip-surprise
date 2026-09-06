@@ -1610,29 +1610,42 @@ function probe(push, label, selector) {
 /* 上传链路自检（?uploadtest=1）：内置 1×1 PNG 走压缩+IndexedDB 全链路 */
 async function runUploadTest() {
   const report = { step: "builtin-png" };
+  const finish = () => {
+    const pre = document.createElement("pre");
+    pre.id = "builder-upload-report";
+    pre.textContent = JSON.stringify(report);
+    document.body.appendChild(pre);
+  };
   try {
-    const b64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
-    const bin = atob(b64);
-    const bytes = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i += 1) bytes[i] = bin.charCodeAt(i);
-    const file = new File([bytes], "selftest-photo.png", { type: "image/png" });
-    const result = await PhotoLib.filesToPhotos([file]);
-    report.added = result.added.length;
-    report.failed = result.failed;
-    if (result.added.length) {
-      const url = await PhotoLib.getPhoto(result.added[0]);
-      report.readBack = url ? url.slice(0, 30) : "MISSING";
-    }
-    report.idbOk = true;
+    // 真实链路与兜底并行：headless 虚拟时间下 IDB 等异步可能被截断
+    await Promise.race([
+      (async () => {
+        const b64 =
+          "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+        const bin = atob(b64);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i += 1) bytes[i] = bin.charCodeAt(i);
+        const file = new File([bytes], "selftest-photo.png", { type: "image/png" });
+        const result = await PhotoLib.filesToPhotos([file]);
+        report.added = result.added.length;
+        report.failed = result.failed;
+        if (result.added.length) {
+          const url = await PhotoLib.getPhoto(result.added[0]);
+          report.readBack = url ? url.slice(0, 30) : "MISSING";
+        }
+        report.idbOk = true;
+      })(),
+      new Promise((resolve) => setTimeout(resolve, 3000)),
+    ]);
+    report.protocol = location.protocol;
+    report.timed = true;
+    finish();
   } catch (err) {
     report.idbOk = false;
     report.error = String((err && err.message) || err);
+    report.protocol = location.protocol;
+    finish();
   }
-  report.protocol = location.protocol;
-  const pre = document.createElement("pre");
-  pre.id = "builder-upload-report";
-  pre.textContent = JSON.stringify(report);
-  document.body.appendChild(pre);
 }
 
 /* ---------- 启动 ---------- */
