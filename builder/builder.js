@@ -536,8 +536,8 @@ function renderStops(body) {
             <input class="b-input" data-p="stops.${i}.action" value="${esc(stop.action || "")}" placeholder="最后一站按钮文字，如：打开最后的惊喜" style="margin-top:6px" />
           </div>` : ""}
           <div class="b-flex" style="justify-content:flex-end;margin-top:10px">
-            <button class="b-btn b-btn-sm b-btn-ghost" data-act="stop-move" data-i="${i}" data-dir="-1" ${i === 0 ? "disabled" : ""}>↑ 上移</button>
-            <button class="b-btn b-btn-sm b-btn-ghost" data-act="stop-move" data-i="${i}" data-dir="1" ${isLast ? "disabled" : ""}>↓ 下移</button>
+            <button class="b-btn b-btn-sm b-btn-ghost${i === 0 ? " is-disabled" : ""}" ${i === 0 ? 'aria-disabled="true" data-tip="已经是第一站了"' : ""} data-act="stop-move" data-i="${i}" data-dir="-1">↑ 上移</button>
+            <button class="b-btn b-btn-sm b-btn-ghost${isLast ? " is-disabled" : ""}" ${isLast ? 'aria-disabled="true" data-tip="已经是最后一站了"' : ""} data-act="stop-move" data-i="${i}" data-dir="1">↓ 下移</button>
             <button class="b-btn b-btn-sm b-btn-ghost" data-act="stop-copy" data-i="${i}">复制</button>
             <button class="b-btn b-btn-sm b-btn-ghost" data-act="stop-del" data-i="${i}">删除</button>
           </div>
@@ -1160,10 +1160,17 @@ async function onClick(e) {
   if (!btn) return;
   const act = btn.dataset.act;
 
+  // 通用规则：任何「不可用」的按钮，点击都必须说明原因，而不是无声无息。
+  // 原生 disabled 不会触发 click，所以禁用一律用 aria-disabled + data-tip 实现，
+  // 让用户点得到、也提示得到。
+  if (btn.disabled || btn.getAttribute("aria-disabled") === "true") {
+    toast(btn.dataset.tip || "这一步暂时还不能点");
+    return;
+  }
+
   if (act === "goto") {
     const step = Number(btn.dataset.step);
     if (step < 0 || step >= STEPS.length) return;
-    if (btn.disabled) return;
     state.step = step;
     previewReady = false;
     renderAll();

@@ -264,7 +264,8 @@ select {
   width: 100%;
 }
 
-.b-btn:disabled {
+.b-btn:disabled,
+.b-btn.is-disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
