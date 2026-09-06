@@ -1,0 +1,23 @@
+# ---------- 系统杂项 ----------
+.DS_Store
+Thumbs.db
+
+# ---------- 隐私红线：个人素材绝不入库 ----------
+# 本模板为开源示例，仓库内只放无隐私素材（示例插画/图标/地图）。
+# 你自己的真实照片、视频请放 assets/photos/ 与本机其它位置，
+# 以下目录与扩展名一律被 git 忽略，防止误提交造成隐私泄漏：
+assets/real/
+assets/batch3/
+assets/batch4/
+assets/media/
+assets/videos/
+assets/memory/
+assets/characters/
+assets/chapters/
+assets/photos/
+*.mp4
+*.mov
+*.avi
+
+# ---------- 个人本地存档 ----------
+private/
