@@ -1543,6 +1543,29 @@ async function runUIDebug() {
         push(`goto${s}:step ${before}->${state.step} clicks=${bodyClickCount}`);
       }
     }
+    // 检查 assist / preview 两步的内容完整性
+    state.step = 3;
+    renderAll();
+    push(
+      "assist:" +
+        "ai-pane=" + ($("ai-pane") ? ($("ai-pane").textContent || "").trim().length : "MISSING") +
+        " tabs=" + document.querySelectorAll(".b-tabs button").length +
+        " hasKey=" + Boolean($("ai-key")) +
+        " hasLog=" + Boolean($("ai-log")) +
+        " hasInput=" + Boolean($("ai-input")) +
+        " bodyLen=" + ($("b-body").textContent || "").length,
+    );
+    state.step = 4;
+    renderAll();
+    // preview 会自动触发 refreshPreview（异步），这里只等一拍
+    await new Promise((r) => setTimeout(r, 600));
+    push(
+      "preview:" +
+        "frame=" + Boolean($("preview-frame")) +
+        " downloadBtn=" + Boolean(document.querySelector('[data-act="download"]')) +
+        " previewReady=" + previewReady +
+        " previewBytes=" + (previewHtml ? new Blob([previewHtml]).size : 0),
+    );
     push("finalStep=" + state.step);
   } catch (err) {
     push("ERR:" + err.message);
@@ -1584,6 +1607,14 @@ if (qParams.get("selftest") === "1") {
 } else if (qParams.get("uidebug") === "1") {
   runUIDebug();
 } else {
+  // 调试直达：?view=0..4 直接进入对应步骤（无草稿时自动载入示例）
+  const viewParam = qParams.get("view");
+  if (viewParam !== null) {
+    if (!state.draft) state.draft = sampleDraft();
+    const v = Math.min(Math.max(Number(viewParam) || 0, 0), STEPS.length - 1);
+    state.step = v;
+    previewReady = false;
+  }
   bind();
   renderAll();
 }
