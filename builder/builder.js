@@ -407,30 +407,35 @@ function thumbBlock(path, ref) {
     : "";
 }
 
-function thumbUpdateForPath(path, ref) {
-  const img = document.querySelector(`[data-pickprev="${cssId(path)}"]`);
-  const holder = document.querySelector(`[data-u-to="pic:${cssId(path)}"]`);
-  const wrap = (img && img.closest(".b-flex")) || (holder && holder.closest(".b-flex"));
-  if (!wrap) return;
-  const src = ref
-    ? ref.startsWith("m:")
-      ? SRC.media[ref.slice(2)]
-      : ref.startsWith("u:")
-        ? state.uiPhotoCache[ref.slice(2)] || ""
-        : ref
-    : "";
-  if (!src) {
-    if (holder) holder.textContent = ref ? "加载照片…" : "";
-    return;
-  }
-  if (holder) holder.closest(".b-flex").remove();
-  const existing = wrap.querySelector("[data-pickprev]");
-  if (existing) {
-    existing.src = src;
-  } else {
-    wrap.innerHTML = `<img data-pickprev="${cssId(path)}" src="${src}" alt="" style="width:118px;height:76px;object-fit:cover;border-radius:10px;border:1px solid var(--bk-line)" />
-      <span class="b-muted" style="font-size:12px">${ref.startsWith("u:") ? "你上传的照片" : "当前已选"}</span>`;
-  }
+/* 预览块 HTML（清除/换图时用它整体替换） */
+function previewBlockHtml(pid, src, isUploaded) {
+  return `<div class="b-flex" style="margin-bottom:8px">
+    <img data-pickprev="${pid}" src="${src}" alt="" style="width:118px;height:76px;object-fit:cover;border-radius:10px;border:1px solid var(--bk-line)" />
+    <span class="b-muted" style="font-size:12px">${isUploaded ? "你上传的照片" : "当前已选"}</span>
+  </div>`;
+}
+
+/*
+ * 同步单个图片位的预览：
+ *  ref 为空 → 移除预览块（点「清除」后图片立刻消失）；
+ *  ref 有效 → 移除旧块并把新图块插到选择面板顶部。
+ */
+function thumbUpdateForPath(path, ref, host) {
+  const pid = cssId(path);
+  document
+    .querySelectorAll(`[data-pickprev="${pid}"], [data-u-to="pic:${pid}"]`)
+    .forEach((el) => {
+      const w = el.closest(".b-flex");
+      if (w) w.remove();
+    });
+  if (!ref || !host) return;
+  const src = ref.startsWith("m:")
+    ? SRC.media[ref.slice(2)] || ""
+    : ref.startsWith("u:")
+      ? state.uiPhotoCache[ref.slice(2)] || ""
+      : ref;
+  if (!src) return; // 用户照片尚未读入：交给 hydrate 占位
+  host.insertAdjacentHTML("afterbegin", previewBlockHtml(pid, src, ref.startsWith("u:")));
 }
 
 /* ---------- 第 2 步：行程与文案 ---------- */
@@ -589,24 +594,17 @@ function hydratePhotos() {
     PhotoLib.getPhoto(id).then((dataUrl) => {
       if (!dataUrl || !el.isConnected) return;
       state.uiPhotoCache[id] = dataUrl;
-      const target = el.getAttribute("data-u-to");
-      const path = "u:" + id;
-      const refPath = target ? "pic:" : "";
-      if (target) {
-        const holder = el.closest(".b-flex");
-        if (holder) holder.remove();
-        // 找到该 picker 容器并刷新预览
-        const container = el.closest(".b-pick");
-        if (container) {
-          container.insertAdjacentHTML(
-            "afterbegin",
-            `<div class="b-flex" style="margin-bottom:8px">
-              <img data-pickprev="${refPath ? "" : ""}" src="${dataUrl}" alt="" style="width:118px;height:76px;object-fit:cover;border-radius:10px;border:1px solid var(--bk-line)" />
-              <span class="b-muted" style="font-size:12px">你上传的照片</span>
-            </div>`,
-          );
-        }
-      }
+      const holder = el.closest(".b-flex");
+      const container = el.closest(".b-pick");
+      if (holder) holder.remove();
+      if (!container) return;
+      // 从 data-u-to="pic:xxx" 还原路径 id，插入带清除标记的预览块
+      const target = el.getAttribute("data-u-to") || "";
+      const pid = target.startsWith("pic:") ? target.slice(4) : "";
+      container.insertAdjacentHTML(
+        "afterbegin",
+        previewBlockHtml(pid, dataUrl, true),
+      );
     });
   });
 }
@@ -1273,7 +1271,7 @@ async function onClick(e) {
         .forEach((c) => c.classList.remove("is-on"));
       btn.classList.add("is-on");
     }
-    thumbUpdateForPath(path, "m:" + key);
+    thumbUpdateForPath(path, "m:" + key, btn.closest(".b-pick"));
     scheduleSave();
     return;
   }
@@ -1289,7 +1287,7 @@ async function onClick(e) {
         .querySelectorAll(".b-pick-item")
         .forEach((c) => c.classList.remove("is-on"));
     }
-    thumbUpdateForPath(path, "");
+    thumbUpdateForPath(path, "", btn.closest(".b-pick"));
     scheduleSave();
     return;
   }
