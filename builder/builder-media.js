@@ -77,7 +77,7 @@
       };
       img.onerror = () => {
         URL.revokeObjectURL(url);
-        reject(new Error("无法读取这张图片"));
+        reject(new Error("无法解码图片"));
       };
       img.src = url;
     });
@@ -99,22 +99,47 @@
     ctx.fillStyle = "#fff";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL("image/jpeg", quality || 0.85);
+    try {
+      return canvas.toDataURL("image/jpeg", quality || 0.85);
+    } catch (err) {
+      throw new Error("浏览器不允许处理这张图片");
+    }
+  }
+
+  // 把失败原因翻译成人话
+  function friendlyError(file, err) {
+    const msg = String((err && err.message) || err);
+    if (/SecurityError|安全/i.test(msg)) {
+      return "浏览器禁止保存照片——请用 start.command 启动器以 http:// 方式打开本页，不要直接双击文件，再试一次";
+    }
+    if (/decode|无法解码|decode failed|FORMAT/i.test(msg)) {
+      return "「" + file.name + "」格式无法解码（可能是 HEIC 等），请转成 JPG/PNG 再试";
+    }
+    if (/IndexedDB|openDb|照片库/i.test(msg)) {
+      return "浏览器本地照片库不可用（" + msg + "），请换 Chrome/Edge，或用启动器 http:// 方式打开";
+    }
+    return "「" + file.name + "」处理失败：" + msg;
   }
 
   async function filesToPhotos(fileList) {
-    const files = Array.from(fileList || []).filter((f) => f.type.startsWith("image/"));
-    const ids = [];
+    const files = Array.from(fileList || []);
+    const added = [];
+    const failed = [];
     for (const file of files) {
+      if (!file.type.startsWith("image/")) {
+        failed.push({ name: file.name, reason: "不是图片文件（" + (file.type || "无类型") + "）" });
+        continue;
+      }
       try {
         const dataUrl = await fileToDataUrl(file);
         const id = await addPhoto(dataUrl);
-        ids.push(id);
+        added.push(id);
       } catch (err) {
-        console.warn("[builder-media]", err);
+        console.warn("[builder-media]", file.name, err);
+        failed.push({ name: file.name, reason: friendlyError(file, err) });
       }
     }
-    return ids;
+    return { added, failed };
   }
 
   w.PhotoLib = {

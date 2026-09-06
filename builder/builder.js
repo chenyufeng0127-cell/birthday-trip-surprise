@@ -1130,9 +1130,15 @@ async function handleUpload(input) {
   const files = input.files;
   if (!files || !files.length) return;
   toast(multi ? "正在压缩并保存照片…" : "正在处理照片…");
-  const ids = await PhotoLib.filesToPhotos(files);
+  const result = await PhotoLib.filesToPhotos(files);
+  const ids = result.added;
+  const failed = result.failed || [];
   if (!ids.length) {
-    toast("没有可用的图片");
+    // 一张都没成：给出具体原因，而不是笼统的「没有可用图片」
+    const reason = failed.length
+      ? failed[0].reason
+      : "没有可用的图片（请选择 JPG/PNG 照片）";
+    toast("添加失败：" + reason);
     return;
   }
   const d = state.draft;
@@ -1150,7 +1156,11 @@ async function handleUpload(input) {
   });
   scheduleSave();
   input.value = "";
-  toast("照片已添加 ✓");
+  if (failed.length) {
+    toast("已添加 " + ids.length + " 张，另有 " + failed.length + " 张失败：" + failed[0].reason);
+  } else {
+    toast("照片已添加 ✓");
+  }
   rerenderCurrent();
   hydratePhotos();
 }
@@ -1597,6 +1607,34 @@ function probe(push, label, selector) {
   );
 }
 
+/* 上传链路自检（?uploadtest=1）：内置 1×1 PNG 走压缩+IndexedDB 全链路 */
+async function runUploadTest() {
+  const report = { step: "builtin-png" };
+  try {
+    const b64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i += 1) bytes[i] = bin.charCodeAt(i);
+    const file = new File([bytes], "selftest-photo.png", { type: "image/png" });
+    const result = await PhotoLib.filesToPhotos([file]);
+    report.added = result.added.length;
+    report.failed = result.failed;
+    if (result.added.length) {
+      const url = await PhotoLib.getPhoto(result.added[0]);
+      report.readBack = url ? url.slice(0, 30) : "MISSING";
+    }
+    report.idbOk = true;
+  } catch (err) {
+    report.idbOk = false;
+    report.error = String((err && err.message) || err);
+  }
+  report.protocol = location.protocol;
+  const pre = document.createElement("pre");
+  pre.id = "builder-upload-report";
+  pre.textContent = JSON.stringify(report);
+  document.body.appendChild(pre);
+}
+
 /* ---------- 启动 ---------- */
 loadDraft();
 const qParams = new URLSearchParams(location.search);
@@ -1606,6 +1644,8 @@ if (qParams.get("selftest") === "1") {
   runE2E();
 } else if (qParams.get("uidebug") === "1") {
   runUIDebug();
+} else if (qParams.get("uploadtest") === "1") {
+  runUploadTest();
 } else {
   // 调试直达：?view=0..4 直接进入对应步骤（无草稿时自动载入示例）
   const viewParam = qParams.get("view");
