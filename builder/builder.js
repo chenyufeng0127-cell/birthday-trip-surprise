@@ -120,7 +120,10 @@ function saveDraft() {
   try {
     localStorage.setItem(LS_DRAFT, JSON.stringify(state.draft));
   } catch (err) {
-    toast("草稿保存失败（浏览器存储已满？）");
+    // 常见原因：照片占满了 localStorage（浏览器只给约 5MB），草稿写不进去
+    toast(
+      "草稿保存失败：本浏览器本地空间已满（照片占用过多或浏览器限制存储）。建议：删几张照片，或用 Chrome / Edge 打开本页",
+    );
   }
 }
 
@@ -1147,7 +1150,9 @@ async function handleUpload(input) {
     ids.forEach((id) => cur.push("u:" + id));
     setByPath(d, path, cur);
   } else {
+    const oldRef = getByPath(d, path);
     setByPath(d, path, "u:" + ids[0]);
+    releasePhotoIfOrphan(oldRef); // 单图位被新照片顶掉时，旧图若孤儿则释放
   }
   ids.forEach((id) => {
     PhotoLib.getPhoto(id).then((dataUrl) => {
@@ -1176,6 +1181,19 @@ async function handleUpload(input) {
   }
   rerenderCurrent();
   hydratePhotos();
+}
+
+/* 照片若已不被草稿任何位置引用，就从存储中删除（释放 localStorage 空间） */
+function releasePhotoIfOrphan(ref) {
+  if (typeof ref !== "string" || !ref.startsWith("u:")) return;
+  const marker = '"' + ref + '"';
+  try {
+    if (JSON.stringify(state.draft).indexOf(marker) !== -1) return; // 仍被引用
+  } catch (err) {
+    return;
+  }
+  PhotoLib.removePhoto(ref.slice(2)).catch(() => {});
+  delete state.uiPhotoCache[ref.slice(2)];
 }
 
 /* 顶栏显示照片存储模式（IndexedDB 正常 / localStorage 轻量 / 仅本次会话） */
@@ -1258,7 +1276,9 @@ async function onClick(e) {
 
   if (act === "pick-clear") {
     const path = btn.dataset.path;
+    const oldRef = getByPath(state.draft, path);
     setByPath(state.draft, path, "");
+    releasePhotoIfOrphan(oldRef);
     const container = btn.closest(".b-pick");
     if (container) {
       container
@@ -1363,8 +1383,10 @@ async function onClick(e) {
     const idx = Number(btn.dataset.idx);
     const s = state.draft.stops[stop];
     if (!s) return;
+    const removed = s.gallery[idx];
     s.gallery.splice(idx, 1);
     if (Array.isArray(s.galleryCaption)) s.galleryCaption.splice(idx, 1);
+    releasePhotoIfOrphan(removed); // 不再被引用则释放存储空间
     scheduleSave();
     rerenderCurrent();
     hydratePhotos();

@@ -88,6 +88,26 @@
     );
   }
 
+  /* localStorage 照片占用（字节，按 UTF-16 计） */
+  function lsPhotosBytes() {
+    let total = 0;
+    try {
+      for (let i = 0; i < localStorage.length; i += 1) {
+        const k = localStorage.key(i);
+        if (k && k.indexOf(LS_PREFIX) === 0) {
+          const v = localStorage.getItem(k);
+          total += (k.length + (v ? v.length : 0)) * 2;
+        }
+      }
+    } catch (err) {
+      /* ignore */
+    }
+    return total;
+  }
+
+  /* localStorage 模式留给照片的最大空间：给草稿及其它键留 400KB */
+  const LS_PHOTO_LIMIT = 4.2 * 1024 * 1024;
+
   async function addPhoto(dataUrl) {
     const id = newId();
     const m = await detectMode();
@@ -100,11 +120,17 @@
         tx.onerror = () => reject(tx.error);
       });
     } else if (m === "local") {
+      // 先估算，空间不足直接说清楚，而不是让浏览器静默失败
+      if (lsPhotosBytes() + dataUrl.length * 2 > LS_PHOTO_LIMIT) {
+        throw new Error(
+          "当前浏览器只提供约 5MB 本地空间，照片已快存满（建议不超过 10-15 张）。可删除几张旧照片，或改用 Chrome / Edge 打开本页获得更大存储",
+        );
+      }
       try {
         localStorage.setItem(LS_PREFIX + id, dataUrl);
       } catch (err) {
         throw new Error(
-          "本地存储空间不足（约 5MB 上限）——请少放几张照片，或改用 Chrome / Edge 打开本页以获得更大存储",
+          "本地存储已满——当前浏览器空间约 5MB。请删除一些照片，或改用 Chrome / Edge 打开本页",
         );
       }
     } else {
@@ -196,13 +222,25 @@
     const files = Array.from(fileList || []);
     const added = [];
     const failed = [];
+    // 存储受限（localStorage/内存）时压得更小，让有限的 5MB 能多装几张
+    let dim = 1440;
+    let quality = 0.85;
+    try {
+      const m = await detectMode();
+      if (m !== "idb") {
+        dim = 1080;
+        quality = 0.72;
+      }
+    } catch (err) {
+      /* ignore */
+    }
     for (const file of files) {
       if (!file.type.startsWith("image/")) {
         failed.push({ name: file.name, reason: "不是图片文件（" + (file.type || "无类型") + "）" });
         continue;
       }
       try {
-        const dataUrl = await fileToDataUrl(file);
+        const dataUrl = await fileToDataUrl(file, dim, quality);
         const id = await addPhoto(dataUrl);
         added.push(id);
       } catch (err) {
