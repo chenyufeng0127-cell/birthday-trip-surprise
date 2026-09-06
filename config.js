@@ -123,7 +123,7 @@ window.TRIP_CONFIG = {
       image: "assets/ai/ai-cinema.webp",
       gallery: [],
       galleryCaption: [],
-      icon: "assets/icons/cinema.webp",
+      icon: "emoji:🎬", // 图标支持：预设图标 / emoji（如 🎬）/ 上传贴纸
       music: "cinema",
       action: "继续旅程",
     },

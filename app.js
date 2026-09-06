@@ -88,6 +88,14 @@ function esc(value) {
   ));
 }
 
+/* 站图标：图片（m:/u:/路径/dataURL）或 emoji: 开头的字符 */
+function iconHtml(icon) {
+  if (typeof icon === "string" && icon.startsWith("emoji:")) {
+    return `<span class="marker-emoji">${esc(icon.slice(6))}</span>`;
+  }
+  return `<img src="${esc(icon || "")}" alt="" />`;
+}
+
 /* ---------- 地图几何：点位缺失时自动排布，路线自动连线 ---------- */
 
 function autoPositions(count) {
@@ -387,7 +395,7 @@ function renderMap() {
 
     marker.innerHTML = `
       <span class="marker-day">${esc(dayLabel(stop.day))}</span>
-      <span class="marker-icon"><img src="${esc(stop.icon)}" alt="" /></span>
+      <span class="marker-icon">${iconHtml(stop.icon)}</span>
       <span class="marker-name">${esc(stop.title)}</span>
     `;
 

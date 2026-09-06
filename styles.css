@@ -568,6 +568,11 @@ img {
   object-fit: cover;
 }
 
+.marker-icon .marker-emoji {
+  font-size: 27px;
+  line-height: 1;
+}
+
 .marker-name {
   max-width: 84px;
   overflow: hidden;

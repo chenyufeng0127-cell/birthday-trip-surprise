@@ -474,6 +474,33 @@ function thumbUpdateForPath(path, ref, host) {
 
 /* ---------- 第 2 步：行程与文案 ---------- */
 
+function iconEmojiOf(icon) {
+  return typeof icon === "string" && icon.startsWith("emoji:")
+    ? icon.slice(6)
+    : "";
+}
+
+/* 图标当前值预览：emoji 放大 / 内置图 / 上传贴纸（未读出的先占位） */
+function iconThumbHtml(icon) {
+  if (!icon) return "";
+  if (icon.startsWith("emoji:")) {
+    const c = icon.slice(6) || "😊";
+    return `<span class="b-flex" style="margin-bottom:8px"><b style="font-size:30px;line-height:1">${esc(c)}</b></span>`;
+  }
+  let src = "";
+  if (icon.startsWith("m:")) src = SRC.media[icon.slice(2)] || "";
+  else if (icon.startsWith("u:")) src = state.uiPhotoCache[icon.slice(2)] || "";
+  if (!src) {
+    if (icon.startsWith("u:")) {
+      return `<span class="b-flex" style="margin-bottom:8px"><i class="b-muted" style="font-size:12px" data-icon-u="${esc(icon.slice(2))}">正在读取贴纸…</i></span>`;
+    }
+    return "";
+  }
+  return `<span class="b-flex" style="margin-bottom:8px">
+    <img src="${esc(src)}" alt="" style="width:52px;height:52px;object-fit:cover;border-radius:14px;border:2px solid #fff;box-shadow:0 4px 10px rgba(120,97,88,.18)" />
+  </span>`;
+}
+
 function renderStops(body) {
   const d = state.draft;
   if (!d.stops.length) {
@@ -555,7 +582,16 @@ function renderStops(body) {
               <input class="b-input" data-p="stops.${i}.hint" value="${esc(stop.hint || "")}" placeholder="如：第 1 张卡：手作卡" /></div>
           </div>
           <div class="b-field"><label>站图标（地图上的小图标）</label>
-            <div class="b-pick">${iconChips}</div></div>
+            <div class="b-pick">
+              ${iconThumbHtml(stop.icon)}
+              ${iconChips}
+              <span class="b-flex" style="width:100%">
+                <input class="b-input" style="flex:1;min-width:0" data-icon-emoji="${i}" placeholder="或用 emoji，如 🍜 🚗 🎆" value="${esc(iconEmojiOf(stop.icon))}" maxlength="6" />
+                <button class="b-btn b-btn-sm" data-act="pick-upload" data-path="stops.${i}.icon" data-multi="0">📷 上传贴纸</button>
+                ${stop.icon ? `<button class="b-btn b-btn-sm b-btn-ghost" data-act="pick-clear" data-path="stops.${i}.icon">清除</button>` : ""}
+              </span>
+            </div>
+            <p class="b-hint">图标显示在 52px 圆角框内：emoji 或透明贴纸效果最好；普通照片建议放到「章节大图」。</p></div>
           <div class="b-field"><label>章节大图（进入这一站看到的大图）</label>
             <div class="b-pick">
               ${thumbBlock("stops.${i}.image", stop.image || "")}
@@ -639,6 +675,17 @@ function hydratePhotos() {
         "afterbegin",
         previewBlockHtml(pid, dataUrl, true),
       );
+    });
+  });
+  // 站图标上传的贴纸占位
+  document.querySelectorAll("[data-icon-u]").forEach((el) => {
+    const id = el.getAttribute("data-icon-u");
+    PhotoLib.getPhoto(id).then((dataUrl) => {
+      if (!dataUrl || !el.isConnected) return;
+      state.uiPhotoCache[id] = dataUrl;
+      const wrap = el.closest(".b-flex");
+      if (!wrap) return;
+      wrap.innerHTML = `<img src="${dataUrl}" alt="" style="width:52px;height:52px;object-fit:cover;border-radius:14px;border:2px solid #fff;box-shadow:0 4px 10px rgba(120,97,88,.18)" />`;
     });
   });
 }
@@ -1106,7 +1153,19 @@ async function downloadHtml() {
 
 function onInput(e) {
   const t = e.target;
-  if (!t.dataset || t.dataset.p === undefined) return;
+  if (!t.dataset) return;
+  // 站图标：输入 emoji
+  if (t.dataset.iconEmoji !== undefined) {
+    const stop = (state.draft.stops || [])[Number(t.dataset.iconEmoji)];
+    if (stop) {
+      const v = t.value.trim();
+      if (v) stop.icon = "emoji:" + v;
+      else if (stop.icon && stop.icon.startsWith("emoji:")) stop.icon = "";
+      scheduleSave();
+    }
+    return;
+  }
+  if (t.dataset.p === undefined) return;
   const lines = t.dataset.lines === "1";
   const raw = lines ? t.value.split("\n") : t.value;
   const value =
@@ -1337,6 +1396,11 @@ async function onClick(e) {
         .querySelectorAll(".b-pick-item")
         .forEach((c) => c.classList.remove("is-on"));
       btn.classList.add("is-on");
+      // 站点选了内置图标时，清掉旁边的 emoji 输入
+      if (path.endsWith(".icon")) {
+        const emoji = container.querySelector("[data-icon-emoji]");
+        if (emoji) emoji.value = "";
+      }
     }
     thumbUpdateForPath(path, "m:" + key, btn.closest(".b-pick"));
     scheduleSave();
@@ -1353,6 +1417,10 @@ async function onClick(e) {
       container
         .querySelectorAll(".b-pick-item")
         .forEach((c) => c.classList.remove("is-on"));
+      if (path.endsWith(".icon")) {
+        const emoji = container.querySelector("[data-icon-emoji]");
+        if (emoji) emoji.value = "";
+      }
     }
     thumbUpdateForPath(path, "", btn.closest(".b-pick"));
     scheduleSave();
