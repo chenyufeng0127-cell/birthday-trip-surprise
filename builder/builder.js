@@ -1293,14 +1293,19 @@ async function handleUpload(input) {
     return;
   }
   const d = state.draft;
+  let hadOld = false;
   if (multi) {
-    const cur = getByPath(d, path) || [];
+    // 照片墙：永远「追加」，不覆盖已有照片
+    const existed = getByPath(d, path);
+    const cur = Array.isArray(existed) ? existed.slice() : [];
     ids.forEach((id) => cur.push("u:" + id));
     setByPath(d, path, cur);
   } else {
+    // 单图位（封面/大图/头像/图标）：一张图的位置，新图替换旧图
     const oldRef = getByPath(d, path);
+    hadOld = Boolean(oldRef);
     setByPath(d, path, "u:" + ids[0]);
-    releasePhotoIfOrphan(oldRef); // 单图位被新照片顶掉时，旧图若孤儿则释放
+    releasePhotoIfOrphan(oldRef); // 被顶掉的旧图若孤儿则释放
   }
   // 先把新照片的缩略图全部读出来缓存，再渲染——保证添加后立刻能看到
   await Promise.all(
@@ -1322,14 +1327,15 @@ async function handleUpload(input) {
   } catch (err) {
     /* ignore */
   }
-  if (failed.length) {
-    toast(
-      "已添加 " + ids.length + " 张，另有 " + failed.length + " 张失败：" +
-        failed[0].reason,
-    );
-  } else {
-    toast("照片已添加 ✓" + storageNote);
-  }
+  const doneMsg = multi
+    ? "已添加 " + ids.length + " 张照片"
+    : hadOld
+      ? "已替换为这张新图（单图位置，一张即换）"
+      : "已设置这张图";
+  toast(
+    (failed.length ? doneMsg + "，" + failed.length + " 张失败" : doneMsg + " ✓") +
+      storageNote,
+  );
   rerenderCurrent(true); // 保留滚动位置，用户就在刚刚添加的位置看到照片
   hydratePhotos();
 }
