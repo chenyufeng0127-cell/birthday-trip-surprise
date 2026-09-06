@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no"
+    />
+    <title>生日旅行</title>
+    <meta name="description" content="一封在手机里慢慢展开的旅行邀请。" />
+    <meta name="theme-color" content="#f8f3ea" />
+    <meta property="og:title" content="生日旅行" />
+    <meta property="og:description" content="一封在手机里慢慢展开的旅行邀请。" />
+    <meta property="og:image" content="assets/map/map-seaside.webp" />
+    <link rel="icon" type="image/png" href="assets/icons/favicon.png" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="app" class="app">
+      <section class="screen cover is-active" id="screen-cover" aria-hidden="false">
+        <div class="cover-media" id="cover-media">
+          <img id="cover-img" src="" alt="" decoding="async" />
+          <div class="cover-shade"></div>
+          <div class="cover-glow"></div>
+        </div>
+
+        <div class="cover-content">
+          <p class="kicker" id="cover-kicker"></p>
+          <h1 class="cover-title" id="cover-title"></h1>
+          <p class="cover-sub" id="cover-sub"></p>
+          <div class="cover-couple" id="cover-couple">
+            <div class="cover-avatars" id="cover-avatars"></div>
+            <div class="cover-couple-copy">
+              <p class="cover-couple-name" id="cover-couple-name"></p>
+              <p class="cover-couple-note" id="cover-couple-note"></p>
+            </div>
+          </div>
+          <p class="cover-map-chip" id="cover-map-chip"></p>
+          <button class="btn btn-primary btn-start" id="start-btn" type="button">
+            <span>让故事开始</span>
+            <span class="btn-arrow" aria-hidden="true">→</span>
+          </button>
+          <p class="cover-note">路线不会一次说完，每一站都会悄悄解锁一点浪漫。</p>
+          <button class="text-link cover-memory-link" id="cover-memory-link" type="button"></button>
+        </div>
+      </section>
+
+      <section class="screen map" id="screen-map" aria-hidden="true">
+        <header class="topbar">
+          <button class="icon-btn map-home-btn" id="map-home-btn" type="button" aria-label="返回首页">
+            <span aria-hidden="true">←</span>
+          </button>
+          <div>
+            <p class="eyebrow" id="map-eyebrow"></p>
+            <h2 class="topbar-title" id="map-title"></h2>
+          </div>
+        </header>
+
+        <div class="map-scroll">
+          <div class="map-wrap">
+            <img class="map-img" id="map-bg" src="" alt="" decoding="async" />
+            <svg
+              class="map-route"
+              viewBox="0 0 100 100"
+              preserveAspectRatio="none"
+              aria-hidden="true"
+            >
+              <path id="route-path" d="" />
+            </svg>
+            <div class="map-markers" id="map-markers"></div>
+            <div class="map-couple" id="map-couple" aria-hidden="true"></div>
+            <div class="map-veil"></div>
+          </div>
+
+          <div class="map-panel">
+            <p class="eyebrow" id="map-day-label"></p>
+            <h3 class="map-title" id="map-current-title"></h3>
+            <p class="map-note" id="map-current-note"></p>
+            <button class="btn btn-primary btn-wide" id="map-action-btn" type="button"></button>
+            <p class="map-progress" id="map-progress"></p>
+          </div>
+
+          <div class="itinerary">
+            <div class="itinerary-head">
+              <p class="eyebrow" id="itinerary-eyebrow"></p>
+              <h3 id="itinerary-title"></h3>
+            </div>
+            <div id="itinerary-days"></div>
+          </div>
+          <button class="btn btn-ghost map-memory-link" id="map-memory-link" type="button"></button>
+        </div>
+      </section>
+
+      <section class="screen chapter" id="screen-chapter" aria-hidden="true">
+        <header class="chapter-head">
+          <button class="icon-btn" id="chapter-back-btn" type="button" aria-label="回到地图">
+            <span aria-hidden="true">←</span>
+          </button>
+          <p class="eyebrow" id="chapter-day"></p>
+        </header>
+
+        <div class="chapter-scroll">
+          <div class="scene-card">
+            <img id="chapter-img" src="" alt="" decoding="async" />
+            <span class="scene-index" id="chapter-index"></span>
+            <span class="scene-day" id="chapter-scene-day"></span>
+          </div>
+
+          <div class="chapter-body">
+            <h2 class="chapter-title" id="chapter-title"></h2>
+            <p class="chapter-short" id="chapter-short"></p>
+            <p class="place-chip" id="chapter-place" hidden></p>
+            <div class="story" id="chapter-story"></div>
+
+            <div class="mood-card">
+              <span class="mood-mark" aria-hidden="true">✧</span>
+              <p id="chapter-mood"></p>
+            </div>
+
+            <div class="task-card" id="chapter-task" hidden></div>
+            <div class="hint-card" id="chapter-hint" hidden></div>
+
+            <div class="dice-card" id="dice-card" hidden>
+              <div class="dice-head">
+                <div>
+                  <p class="dice-title">骰子机会券</p>
+                  <p class="dice-note">摇一次，看看今天的手气</p>
+                </div>
+                <span class="dice-tag">BONUS</span>
+              </div>
+              <div class="die" id="die" aria-label="骰子"></div>
+              <button class="btn btn-ghost btn-wide" id="dice-btn" type="button">
+                摇骰子
+              </button>
+              <p class="dice-result" id="dice-result" hidden></p>
+            </div>
+
+            <div class="real-gallery" id="real-gallery" hidden>
+              <div class="real-gallery-head">
+                <p class="eyebrow">OUR MOMENTS</p>
+                <h3>这一站的照片</h3>
+              </div>
+              <div class="real-photo-grid" id="real-photo-grid"></div>
+            </div>
+          </div>
+        </div>
+
+        <footer class="action-bar">
+          <button class="btn btn-ghost" id="chapter-map-btn" type="button">回到地图</button>
+          <button class="btn btn-primary" id="chapter-next-btn" type="button"></button>
+        </footer>
+      </section>
+
+      <section class="screen finale" id="screen-finale" aria-hidden="true">
+        <div class="finale-sky" id="finale-sky" aria-hidden="true"></div>
+        <div class="finale-content">
+          <p class="eyebrow">HAPPY BIRTHDAY</p>
+          <h2 class="finale-name" id="finale-name"></h2>
+          <div class="finale-story" id="finale-story"></div>
+          <button class="btn btn-primary btn-glow" id="finale-btn" type="button"></button>
+          <p class="finale-note" id="finale-note" hidden>
+            先打开礼物，再翻开那本写给你的小本子。
+          </p>
+          <button class="text-link" id="memory-link" type="button"></button>
+        </div>
+      </section>
+
+      <section class="screen memory" id="screen-memory" aria-hidden="true">
+        <header class="memory-head">
+          <button class="icon-btn" id="memory-back-btn" type="button" aria-label="回到旅程">
+            <span aria-hidden="true">←</span>
+          </button>
+          <p class="eyebrow">MEMORY EDITION</p>
+          <h2 class="memory-title" id="memory-title"></h2>
+          <p class="memory-sub" id="memory-sub"></p>
+          <div class="memory-badge" id="memory-badge" hidden></div>
+        </header>
+        <div class="memory-scroll" id="memory-scroll"></div>
+      </section>
+    </div>
+
+    <button class="music-toggle" id="music-toggle" type="button" aria-label="打开音乐" title="打开音乐">
+      <span class="music-icon" aria-hidden="true">♪</span>
+    </button>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

@@ -14,7 +14,9 @@ assets/videos/
 assets/memory/
 assets/characters/
 assets/chapters/
-assets/photos/
+assets/photos/*
+!assets/photos/sample/
+!assets/photos/sample/**
 *.mp4
 *.mov
 *.avi
