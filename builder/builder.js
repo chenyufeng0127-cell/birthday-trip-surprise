@@ -147,6 +147,7 @@ function cfgToDraft(cfg) {
   (draft.stops || []).forEach((stop) => {
     stop.image = toRef(stop.image);
     stop.icon = toRef(stop.icon);
+    stop.iconRefs = (stop.iconRefs || []).map(toRef); // 贴纸收藏
     stop.gallery = (stop.gallery || []).map(toRef);
     (stop.videos || []).forEach((v) => {
       v.src = toRef(v.src);
@@ -515,6 +516,29 @@ function removeIconThumb(idx) {
     .forEach((el) => el.remove());
 }
 
+/* 收藏的贴纸格：多张贴纸可并存，点击任一张作为当前图标，右上 ✕ 删除单张 */
+function iconStickerGrid(stop, stopIdx) {
+  const refs = stop.iconRefs || [];
+  if (!refs.length) return "";
+  const cards = refs
+    .map((ref, ri) => {
+      const isCur = ref === stop.icon;
+      const u = ref.startsWith("u:") ? ref.slice(2) : null;
+      const cached = u ? state.uiPhotoCache[u] : null;
+      const inner = cached
+        ? `<img src="${cached}" alt="" />`
+        : u
+          ? `<img src="" alt="" data-u="${u}" style="display:none" /><i class="b-sticker-load">…</i>`
+          : `<b>${esc(ref)}</b>`;
+      return `<span class="b-sticker${isCur ? " is-on" : ""}" title="${isCur ? "当前图标" : "点我设为当前图标"}" data-act="icon-select" data-stop="${stopIdx}" data-ri="${ri}">
+        ${inner}
+        <button type="button" class="b-sticker-x" aria-label="删除这张贴纸" data-act="icon-ref-del" data-stop="${stopIdx}" data-ri="${ri}">✕</button>
+      </span>`;
+    })
+    .join("");
+  return `<div class="b-stickers">${cards}</div>`;
+}
+
 function renderStops(body) {
   const d = state.draft;
   if (!d.stops.length) {
@@ -595,17 +619,18 @@ function renderStops(body) {
             <div class="b-field"><label>卡片提示（填了就有骰子小游戏）</label>
               <input class="b-input" data-p="stops.${i}.hint" value="${esc(stop.hint || "")}" placeholder="如：第 1 张卡：手作卡" /></div>
           </div>
-          <div class="b-field"><label>站图标（地图上的小图标）</label>
+          <div class="b-field"><label>站图标（地图小图标）</label>
             <div class="b-pick">
               ${iconThumbHtml(stop.icon, i)}
+              ${iconStickerGrid(stop, i)}
               ${iconChips}
               <span class="b-flex" style="width:100%">
                 <input class="b-input" style="flex:1;min-width:0" data-icon-emoji="${i}" placeholder="或用 emoji，如 🍜 🚗 🎆" value="${esc(iconEmojiOf(stop.icon))}" maxlength="6" />
-                <button class="b-btn b-btn-sm" data-act="pick-upload" data-path="stops.${i}.icon" data-multi="0">📷 上传贴纸</button>
-                ${stop.icon ? `<button class="b-btn b-btn-sm b-btn-ghost" data-act="pick-clear" data-path="stops.${i}.icon">清除</button>` : ""}
+                <button class="b-btn b-btn-sm" data-act="icon-upload" data-stop="${i}">📷 添加贴纸</button>
+                ${stop.icon ? `<button class="b-btn b-btn-sm b-btn-ghost" data-act="pick-clear" data-path="stops.${i}.icon">清除当前</button>` : ""}
               </span>
             </div>
-            <p class="b-hint">图标显示在 52px 圆角框内：emoji 或透明贴纸效果最好；普通照片建议放到「章节大图」。</p></div>
+            <p class="b-hint">可收藏多张贴纸再任选一张（点它即生效）；贴纸右上角 ✕ 删除单个；预设图标点选即用；emoji 输入即用。地图上显示 52px 圆角框，普通照片建议放到「章节大图」。</p></div>
           <div class="b-field"><label>章节大图（进入这一站看到的大图）</label>
             <div class="b-pick">
               ${thumbBlock("stops.${i}.image", stop.image || "")}
@@ -928,6 +953,7 @@ function applyAiJson(json) {
     hint: s.hint || "",
     image: aiImageToRef(s.image),
     gallery: [],
+    iconRefs: [],
     galleryCaption: [],
     icon: "m:assets/icons/secret-pavilion.webp",
     music: aiImageToMusic(s.image),
@@ -1037,6 +1063,7 @@ async function draftToConfig(draft) {
       caption: v.caption || "",
     }))).filter((v) => v.src);
     if (!s.id) s.id = uid();
+    delete s.iconRefs; // 收藏贴纸列表只在编辑器里用，成品引擎只用 icon
   });
   cfg.copy = cfg.copy && Object.keys(cfg.copy).length ? cfg.copy : defaultCopy();
   if (!["seaside", "forest", "starry"].includes(cfg.theme)) cfg.theme = "seaside";
@@ -1340,6 +1367,39 @@ async function handleUpload(input) {
   hydratePhotos();
 }
 
+/* 把选择的图片文件加入某站的「贴纸收藏」：可多张、不替换已有、无当前图标时自动用第一张 */
+async function addStickers(stopIdx, fileList) {
+  const stop = (state.draft.stops || [])[stopIdx];
+  if (!stop || !fileList || !fileList.length) return;
+  toast("正在压缩并保存贴纸…");
+  const result = await PhotoLib.filesToPhotos(fileList);
+  const ids = result.added;
+  if (!ids.length) {
+    toast(
+      "添加失败：" +
+        (result.failed && result.failed.length
+          ? result.failed[0].reason
+          : "没有可用的图片"),
+    );
+    return;
+  }
+  if (!Array.isArray(stop.iconRefs)) stop.iconRefs = [];
+  const refs = ids.map((id) => "u:" + id);
+  stop.iconRefs = stop.iconRefs.concat(refs);
+  if (!stop.icon) stop.icon = refs[0];
+  await Promise.all(
+    ids.map((id) =>
+      PhotoLib.getPhoto(id).then((d) => {
+        if (d) state.uiPhotoCache[id] = d;
+      }),
+    ),
+  );
+  scheduleSave();
+  toast("已收藏 " + refs.length + " 张贴纸——点击某张贴纸即可设为当前图标");
+  rerenderCurrent(true);
+  hydratePhotos();
+}
+
 /* 照片若已不被草稿任何位置引用，就从存储中删除（释放 localStorage 空间） */
 function releasePhotoIfOrphan(ref) {
   if (typeof ref !== "string" || !ref.startsWith("u:")) return;
@@ -1481,6 +1541,41 @@ async function onClick(e) {
     return;
   }
 
+  if (act === "icon-upload") {
+    const stopIdx = Number(btn.dataset.stop);
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.multiple = true;
+    input.addEventListener("change", () => addStickers(stopIdx, input.files));
+    input.click();
+    return;
+  }
+
+  if (act === "icon-select") {
+    const stop = (state.draft.stops || [])[Number(btn.dataset.stop)];
+    const ref = stop && (stop.iconRefs || [])[Number(btn.dataset.ri)];
+    if (ref && stop.icon !== ref) {
+      stop.icon = ref;
+      scheduleSave();
+      rerenderCurrent(true);
+    }
+    return;
+  }
+
+  if (act === "icon-ref-del") {
+    const stop = (state.draft.stops || [])[Number(btn.dataset.stop)];
+    const ri = Number(btn.dataset.ri);
+    if (!stop || !Array.isArray(stop.iconRefs)) return;
+    const removed = stop.iconRefs.splice(ri, 1)[0];
+    if (stop.icon === removed) stop.icon = "";
+    releasePhotoIfOrphan(removed);
+    scheduleSave();
+    rerenderCurrent(true);
+    hydratePhotos();
+    return;
+  }
+
   if (act === "stop-add") {
     const d = state.draft;
     const last = d.stops[d.stops.length - 1];
@@ -1499,6 +1594,7 @@ async function onClick(e) {
       icon: "m:assets/icons/secret-pavilion.webp",
       music: "cover",
       gallery: [],
+      iconRefs: [],
       galleryCaption: [],
       action: "继续旅程",
     });
