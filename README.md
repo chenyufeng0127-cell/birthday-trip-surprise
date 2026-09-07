@@ -47,6 +47,7 @@ birthday-trip-surprise/
 │   ├── index.html / builder.js / builder.css / builder-media.js
 │   └── template.inline.js                         # 引擎内联资源（脚本自动生成）
 ├── docs/writing-guide.md                          # 文案写作指南
+├── docs/acceptance-checklist.md                   # 全流程验收清单
 ├── scripts/build-template.py                      # 重新生成 template.inline.js
 ├── start.command / start.bat                      # 一键启动器
 └── LICENSE

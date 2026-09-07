@@ -800,7 +800,7 @@ function renderAiPane(tab, _opts) {
           `<div><b>${m.role === "user" ? "你" : "AI"}</b>：${esc(m.content)}</div><div style="height:8px"></div>`,
       )
       .join("");
-    pane.innerHTML = `<div class="b-field"><label>DeepSeek API Key（只存在这台电脑的浏览器里，直接连官方）</label>
+    pane.innerHTML = `<div class="b-field"><label>DeepSeek API Key <span class="b-label-tag">实验性</span>（只存在本机浏览器、直接连官方；若被浏览器拦截请改用「粘贴导入」）</label>
       <input class="b-input" type="password" id="ai-key" value="${esc(localStorage.getItem(LS_AI_KEY) || "")}" placeholder="sk-…" /></div>
       <div class="b-row">
         <div class="b-field"><label>接口地址（一般不用改）</label>
