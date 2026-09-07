@@ -22,6 +22,8 @@
   --grad2: #f4a37c;
   --grad3: #f7c27e;
   --glow: rgba(229, 139, 158, 0.4);
+  /* 地图路线颜色：深色夜景地图时由主题覆盖成亮色 */
+  --route: rgba(255, 255, 255, 0.95);
 }
 
 /*
@@ -71,6 +73,53 @@ body[data-theme="starry"] {
   --grad2: #8d7cc9;
   --grad3: #e0c190;
   --glow: rgba(110, 89, 175, 0.32);
+}
+
+/* 新婚燕尔：香槟金与暖白，白纱、花亭与清晨的光 */
+body[data-theme="newlywed"] {
+  --paper: #fdf7ec;
+  --cream: #f6ecda;
+  --blush: #f6dccc;
+  --rose: #d9a869;
+  --rose-deep: #b9894f;
+  --peach: #efcfa0;
+  --sand: #ead9b4;
+  --aqua: #cfe0d8;
+  --sea: #8fae9e;
+  --sea-deep: #5f8474;
+  --ink: #4a4136;
+  --muted: #8a7c6b;
+  --line: rgba(168, 138, 92, 0.3);
+  --white: #fffdf6;
+  --bg: #eee6d8;
+  --grad1: #edc795;
+  --grad2: #d9a868;
+  --grad3: #e3b2a2;
+  --glow: rgba(196, 143, 82, 0.32);
+}
+
+/* 圣诞颂歌：雪夜小屋与暖窗光，松针绿与红金 */
+body[data-theme="christmas"] {
+  --paper: #f7f9f6;
+  --cream: #eef2ec;
+  --blush: #dde8e3;
+  --rose: #a23b48;
+  --rose-deep: #7f2a35;
+  --peach: #dfa458;
+  --sand: #e0d5b6;
+  --aqua: #bcd9d8;
+  --sea: #5c8f7f;
+  --sea-deep: #3c6558;
+  --ink: #33372f;
+  --muted: #7c8578;
+  --line: rgba(58, 88, 68, 0.28);
+  --white: #fbfdf9;
+  --bg: #e5ece6;
+  --grad1: #c2454f;
+  --grad2: #a23b48;
+  --grad3: #d9a458;
+  --glow: rgba(162, 59, 72, 0.3);
+  --route: rgba(255, 243, 218, 0.98); /* 夜景地图上路线用暖亮色 */
 }
 
 * {
@@ -512,7 +561,7 @@ img {
 
 .map-route path {
   fill: none;
-  stroke: rgba(255, 255, 255, 0.95);
+  stroke: var(--route, rgba(255, 255, 255, 0.95));
   stroke-width: 1.2;
   stroke-linecap: round;
   stroke-dasharray: 3 4;

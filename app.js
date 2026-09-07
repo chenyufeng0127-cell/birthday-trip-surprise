@@ -36,10 +36,11 @@ const params = new URLSearchParams(window.location.search);
 const isPreview = params.get("preview") === "1";
 const shouldReset = params.get("reset") === "1";
 
-/* 主题：config 里可选 seaside / forest / starry；URL ?theme= 可临时切换（调试用） */
-const THEME_ID = ["seaside", "forest", "starry"].includes(params.get("theme"))
+/* 主题：config 里可选 seaside / forest / starry / newlywed / christmas；URL ?theme= 临时切换（调试用） */
+const THEMES_ALLOWED = ["seaside", "forest", "starry", "newlywed", "christmas"];
+const THEME_ID = THEMES_ALLOWED.includes(params.get("theme"))
   ? params.get("theme")
-  : ["seaside", "forest", "starry"].includes(CFG.theme)
+  : THEMES_ALLOWED.includes(CFG.theme)
     ? CFG.theme
     : "seaside";
 try {

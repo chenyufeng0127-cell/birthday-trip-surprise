@@ -134,7 +134,7 @@ function cfgToDraft(cfg) {
     typeof value === "string" && media[value] ? "m:" + value : value;
   const draft = clone(cfg);
   draft.uid = cfg.uid || uid();
-  if (!["seaside", "forest", "starry"].includes(draft.theme)) draft.theme = "seaside";
+  if (!["seaside", "forest", "starry", "newlywed", "christmas"].includes(draft.theme)) draft.theme = "seaside";
   const days = [...new Set((cfg.stops || []).map((s) => s.day))];
   draft.days = days.length ? Math.max(...days) : 3;
   draft.page = draft.page || {};
@@ -171,9 +171,12 @@ function sampleDraft() {
 
 /* 成品风格主题 */
 const THEMES = [
-  { id: "seaside", label: "海边暖沙", note: "奶油粉与暖沙，海风一样轻", swatch: ["#f7c9cf", "#e58b9e", "#4f9aa0"] },
+  { id: "seaside", label: "海边暖沙", note: "奶油粉与暖沙，海风一样轻", swatch: ["#f7c9cf", "#e58b9e", "#4f9aa0"], mapBg: "m:assets/map/map-seaside.webp" },
   { id: "forest", label: "森林", note: "鼠尾草绿与焦糖，安静治愈", swatch: ["#dfe8d2", "#8aa668", "#5e9277"] },
   { id: "starry", label: "星光夜", note: "薰衣草紫与月光金，浪漫入夜", swatch: ["#ddd2f1", "#8d7cc9", "#e0c190"] },
+  { id: "newlywed", label: "新婚燕尔", note: "香槟金与暖白，白纱、花亭与清晨的光", swatch: ["#f6dccc", "#d9a869", "#8fae9e"], mapBg: "m:assets/map/map-honeymoon.jpg" },
+  // 圣诞背景图生成后，把 mapBg 加回来（asset 名约定 assets/map/map-christmas.jpg）
+  { id: "christmas", label: "圣诞颂歌", note: "雪夜小屋与暖窗，松针绿与红金灯", swatch: ["#dde8e3", "#a23b48", "#5c8f7f"] },
 ];
 
 function blankDraft() {
@@ -335,7 +338,13 @@ function fillCoverFrame() {
   if (!doc || !state.draft) return;
   const h = state.draft.hero || {};
   const theme = state.draft.theme;
-  doc.body.dataset.theme = theme === "forest" || theme === "starry" ? theme : "seaside";
+  doc.body.dataset.theme =
+    theme === "forest" ||
+    theme === "starry" ||
+    theme === "newlywed" ||
+    theme === "christmas"
+      ? theme
+      : "seaside";
   const $d = (id) => doc.getElementById(id);
 
   // 封面大图 / 无图纯色
@@ -492,7 +501,7 @@ function renderBasic(body) {
         </button>`;
       }).join("")}
     </div>
-    <p class="b-hint">在最后一步「预览与导出」里可实时查看效果，随时回来换。</p>
+    <p class="b-hint">选风格会同步配套地图背景（若你已自定义地图背景则保留你的）。到「预览与导出」可实时查看成品效果。</p>
   </section>
 
   <section class="b-card">
@@ -1209,7 +1218,7 @@ async function draftToConfig(draft) {
     delete s.iconRefs; // 收藏贴纸列表只在编辑器里用，成品引擎只用 icon
   });
   cfg.copy = cfg.copy && Object.keys(cfg.copy).length ? cfg.copy : defaultCopy();
-  if (!["seaside", "forest", "starry"].includes(cfg.theme)) cfg.theme = "seaside";
+  if (!["seaside", "forest", "starry", "newlywed", "christmas"].includes(cfg.theme)) cfg.theme = "seaside";
   delete cfg.days;
   return cfg;
 }
@@ -1676,13 +1685,34 @@ async function onClick(e) {
   }
 
   if (act === "theme-set") {
-    state.draft.theme = btn.dataset.theme;
+    const picked = THEMES.find((t) => t.id === btn.dataset.theme);
+    state.draft.theme = picked ? picked.id : "seaside";
     previewReady = false;
     document
       .querySelectorAll("[data-act='theme-set']")
       .forEach((c) => c.classList.toggle("is-on", c === btn));
+    // 配套的地图背景：当前背景还是默认海边图或空 → 跟随主题；已自定义则保留
+    const curBg = (state.draft.map && state.draft.map.background) || "";
+    const isDefaultBg =
+      curBg === "" || curBg === "m:assets/map/map-seaside.webp";
+    if (picked && picked.mapBg && isDefaultBg) {
+      state.draft.map = state.draft.map || {};
+      state.draft.map.background = picked.mapBg;
+    } else if (picked && picked.mapBg && !isDefaultBg) {
+      toast(
+        "风格已切换，但你有自定义地图背景，已为你保留（需要的话可在地图背景处换回默认）",
+      );
+      scheduleSave();
+      renderAll();
+      return;
+    }
     scheduleSave();
-    toast("风格已切换为「" + (THEMES.find((t) => t.id === btn.dataset.theme) || {}).label + "」——到「预览与导出」查看效果");
+    rerenderCurrent(true); // 同步地图背景选择区等界面
+    toast(
+      "风格已切换为「" + (picked ? picked.label : "") +
+        "」——已配套" + (picked && picked.mapBg && isDefaultBg ? "地图背景，" : "") +
+        "到「预览与导出」查看效果",
+    );
     return;
   }
 
