@@ -276,25 +276,100 @@ function setLiveText(id, value, emptyHint) {
   el.classList.toggle("is-empty", !v);
 }
 
+let coverFrameReady = false;
+
+function refSrc(ref) {
+  if (!ref) return "";
+  if (ref.startsWith("m:")) return SRC.media[ref.slice(2)] || "";
+  if (ref.startsWith("u:")) return state.uiPhotoCache[ref.slice(2)] || "";
+  return ref;
+}
+
+/* 封面实时预览：加载成品同款样式 + cover 结构，喂入草稿渲染（所见即所得） */
 function refreshCoverLive() {
-  const root = document.getElementById("cover-live");
-  if (!root || !state.draft) return;
+  if (!document.getElementById("cover-live") || !state.draft) return;
+  const frame = document.getElementById("cover-live-frame");
+  if (!frame) return;
+  if (!frame.dataset.inited) {
+    frame.dataset.inited = "1";
+    frame.dataset.token = String(Math.random());
+    initCoverFrame(frame);
+    return;
+  }
+  if (!coverFrameReady) return; // 首帧还没加载完，onload 会自动填充
+  fillCoverFrame();
+}
+
+function initCoverFrame(frame) {
+  const token = frame.dataset.token;
+  coverFrameReady = false;
+  frame.srcdoc =
+    '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">' +
+    "<style>" + SRC.css + "</style></head><body>" +
+    '<section class="screen cover is-active" id="screen-cover">' +
+    '<div class="cover-media" id="cover-media"><img id="cover-img" alt="" decoding="async" /></div>' +
+    '<div class="cover-content">' +
+    '<p class="kicker" id="cover-kicker"></p>' +
+    '<h1 class="cover-title" id="cover-title"></h1>' +
+    '<p class="cover-sub" id="cover-sub"></p>' +
+    '<div class="cover-couple"><div class="cover-couple-copy">' +
+    '<p class="cover-couple-name" id="cover-couple-name"></p>' +
+    '<p class="cover-couple-note" id="cover-couple-note"></p>' +
+    "</div></div></div></section></body></html>";
+  frame.onload = () => {
+    // 只认当前帧（防止重建后的旧帧回调误触发）
+    const cur = document.getElementById("cover-live-frame");
+    if (!cur || cur !== frame || cur.dataset.token !== token) return;
+    coverFrameReady = true;
+    try {
+      fillCoverFrame();
+    } catch (err) {
+      console.warn("[cover-live]", err);
+    }
+  };
+}
+
+function fillCoverFrame() {
+  const frame = document.getElementById("cover-live-frame");
+  const doc = frame && frame.contentDocument;
+  if (!doc || !state.draft) return;
   const h = state.draft.hero || {};
-  setLiveText(
-    "cl-kicker",
-    [(h.datesLabel || "").trim(), (h.badge || "").trim()].filter(Boolean).join(" · "),
-    "（徽章/日期留空则不显示）",
-  );
+  const theme = state.draft.theme;
+  doc.body.dataset.theme = theme === "forest" || theme === "starry" ? theme : "seaside";
+  const $d = (id) => doc.getElementById(id);
+
+  // 封面大图 / 无图纯色
+  const img = $d("cover-img");
+  const media = $d("cover-media");
+  const coverEl = $d("screen-cover");
+  const src = refSrc(h.coverImage);
+  if (src && img) {
+    img.src = src;
+    if (media) media.style.display = "";
+    if (coverEl) coverEl.classList.remove("is-plain");
+  } else {
+    if (img) img.removeAttribute("src");
+    if (media) media.style.display = "none";
+    if (coverEl) coverEl.classList.add("is-plain");
+  }
+
+  const kicker = [(h.datesLabel || "").trim(), (h.badge || "").trim()]
+    .filter(Boolean)
+    .join(" · ");
+  if ($d("cover-kicker")) $d("cover-kicker").textContent = kicker;
+
   const l1 = ((h.titleLines || [])[0] || "").trim() || (h.name ? h.name + "，" : "TA，");
   const l2 = ((h.titleLines || [])[1] || "").trim() || "生日快乐";
-  setLiveText("cl-title", l1 + "\n" + l2, "（主标题）");
-  const subEl = document.getElementById("cl-sub");
+  const titleEl = $d("cover-title");
+  if (titleEl) titleEl.innerHTML = esc(l1) + "<span>" + esc(l2) + "</span>";
+
+  const subEl = $d("cover-sub");
   if (subEl) {
     const sub = (h.subLines || []).filter((s) => s.trim());
-    subEl.innerHTML = sub.length ? sub.map((s) => esc(s)).join("<br />") : '<i class="b-muted">（封面副标题留空则不显示）</i>';
+    subEl.innerHTML = sub.length ? sub.map((s) => esc(s)).join("<br />") : "";
   }
-  setLiveText("cl-couple", h.coupleName, "（落款留空则不显示）");
-  setLiveText("cl-note", h.coupleNote, "");
+  if ($d("cover-couple-name")) $d("cover-couple-name").textContent = h.coupleName || "";
+  if ($d("cover-couple-note")) $d("cover-couple-note").textContent = h.coupleNote || "";
 }
 
 function refreshStopLives() {
@@ -395,15 +470,11 @@ function renderBasic(body) {
   </section>
 
   <section class="b-card">
-    <h3>封面实时预览 <span class="b-muted" style="font-weight:400">（随输入更新，不用切去预览页）</span></h3>
-    <div class="cover-live" id="cover-live" aria-hidden="true">
-      <p class="cl-kicker" id="cl-kicker"></p>
-      <p class="cl-title" id="cl-title"></p>
-      <p class="cl-sub" id="cl-sub"></p>
-      <p class="cl-couple" id="cl-couple"></p>
-      <p class="cl-note" id="cl-note"></p>
+    <h3>封面实时预览 <span class="b-muted" style="font-weight:400">（真·成品样式，随输入更新）</span></h3>
+    <div class="b-cover-frame-box" id="cover-live">
+      <iframe class="b-cover-frame" id="cover-live-frame" title="封面实时预览"></iframe>
     </div>
-    <p class="b-hint">这大致就是 TA 打开成品第一眼看到的封面排版。</p>
+    <p class="b-hint">与成品使用同一套样式与主题；封面大图取自你的选择。头像、动画与完整流程请以「预览与导出」为准。</p>
   </section>
 
   <section class="b-card">
