@@ -177,8 +177,7 @@ const THEMES = [
   { id: "forest", label: "森林", note: "鼠尾草绿与焦糖，安静治愈", swatch: ["#dfe8d2", "#8aa668", "#5e9277"] },
   { id: "starry", label: "星光夜", note: "薰衣草紫与月光金，浪漫入夜", swatch: ["#ddd2f1", "#8d7cc9", "#e0c190"] },
   { id: "newlywed", label: "新婚燕尔", note: "香槟金与暖白，白纱、花亭与清晨的光", swatch: ["#f6dccc", "#d9a869", "#8fae9e"], mapBg: "m:assets/map/map-honeymoon.jpg" },
-  // 圣诞背景图生成后，把 mapBg 加回来（asset 名约定 assets/map/map-christmas.jpg）
-  { id: "christmas", label: "圣诞颂歌", note: "雪夜小屋与暖窗，松针绿与红金灯", swatch: ["#dde8e3", "#a23b48", "#5c8f7f"] },
+  { id: "christmas", label: "圣诞颂歌", note: "雪夜小屋与暖窗，松针绿与红金灯", swatch: ["#dde8e3", "#a23b48", "#5c8f7f"], mapBg: "m:assets/map/map-christmas.jpg" },
 ];
 
 function blankDraft() {
