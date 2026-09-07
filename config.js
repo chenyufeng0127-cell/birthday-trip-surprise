@@ -235,6 +235,7 @@ window.TRIP_CONFIG = {
    * ============================================================== */
   map: {
     background: "assets/map/map-seaside.webp", // 留空 "" 则用纯色底 + 自动排列
+    markerStyle: "pin", // 地图标记样式：pin 图钉 / card 卡片
     positions: [
       { x: 8, y: 84 },
       { x: 30, y: 70 },

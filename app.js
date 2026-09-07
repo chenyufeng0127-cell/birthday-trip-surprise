@@ -393,6 +393,10 @@ function renderMap() {
     if (index === state.current) marker.classList.add("is-current");
     if (isUnlocked(index) && index < state.current) marker.classList.add("is-done");
     marker.classList.add(`day-${stop.day}`);
+    // 标记样式：pin 图钉 / card 卡片（config.map.markerStyle）
+    marker.classList.add(
+      (MAP_CFG.markerStyle || "card") === "pin" ? "marker-pin" : "marker-card",
+    );
 
     marker.innerHTML = `
       <span class="marker-day">${esc(dayLabel(stop.day))}</span>

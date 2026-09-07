@@ -1572,3 +1572,53 @@ img {
   stroke-dasharray: 2 5;
 }
 
+/* ============ 地图标记：图钉式（config map.markerStyle: "pin"）============ */
+.map-marker.marker-pin .marker-icon {
+  position: relative;
+  width: 46px;
+  height: 46px;
+  border-radius: 50% 50% 50% 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 8px 18px rgba(50, 40, 36, 0.28);
+}
+
+.map-marker.marker-pin .marker-icon::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -9px;
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 10px solid var(--rose-deep);
+  transform: translateX(-50%);
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.18));
+}
+
+.map-marker.marker-pin .marker-icon img {
+  border-radius: 50%;
+}
+
+.map-marker.marker-pin .marker-day {
+  display: none;
+}
+
+.map-marker.marker-pin .marker-name {
+  font-size: 10.5px;
+  padding: 3px 8px;
+  color: #fff;
+  background: rgba(45, 38, 34, 0.62);
+  border: 0;
+  box-shadow: none;
+  backdrop-filter: blur(3px);
+}
+
+.map-marker.marker-pin.is-done .marker-icon {
+  filter: saturate(0.7);
+}
+
+.map-marker.marker-pin .marker-emoji {
+  font-size: 21px;
+}
+

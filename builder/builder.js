@@ -104,6 +104,7 @@ const state = {
   uiPhotoCache: {}, // u:id → dataURL（缩略图缓存）
   aiMessages: [],
   lastAiJson: null,
+  calibOpen: false, // 地图站点校准面板是否展开
 };
 
 function loadDraft() {
@@ -144,6 +145,7 @@ function cfgToDraft(cfg) {
   draft.hero.avatars = (draft.hero.avatars || []).map(toRef);
   draft.map = draft.map || {};
   draft.map.background = toRef(draft.map.background);
+  if (!["pin", "card"].includes(draft.map.markerStyle)) draft.map.markerStyle = "pin";
   (draft.stops || []).forEach((stop) => {
     stop.image = toRef(stop.image);
     stop.icon = toRef(stop.icon);
@@ -199,7 +201,7 @@ function blankDraft() {
     copy: defaultCopy(),
     dayDates: {},
     stops: [],
-    map: { background: "m:assets/map/map-seaside.webp" },
+    map: { background: "m:assets/map/map-seaside.webp", markerStyle: "pin" },
   };
 }
 
@@ -538,9 +540,109 @@ function renderBasic(body) {
   <section class="b-card">
     <h2>地图背景</h2>
     ${imagePicker("map.background", (d.map && d.map.background) || "", { media: mediaKeysOf("assets/map"), pickLabel: "上传自己的地图背景", allowClear: true })}
-    <p class="b-hint">不想用地图片也可以「清除」：成品会自动变成好看的纯色地图。</p>
+    <p class="b-hint">背景图只负责画面氛围；站点的图钉/图标、路线都由引擎叠加。若图上画有地标，可用下面的「校准」把站点拖到对应位置。</p>
+    <div class="b-flex" style="margin-top:10px">
+      <span class="b-label" style="margin:0 4px 0 0">标记样式：</span>
+      ${["pin", "card"]
+        .map(
+          (m) =>
+            `<button type="button" class="b-btn b-btn-sm${(d.map && d.map.markerStyle) === m ? " b-btn-primary" : " b-btn-ghost"}" data-act="map-style" data-style="${m}">${m === "pin" ? "📌 图钉（尖角指向地标）" : "▦ 卡片（大图标）"}</button>`,
+        )
+        .join("")}
+      <span class="b-spacer"></span>
+      <button type="button" class="b-btn b-btn-sm" data-act="calib-open">🎯 校准站点位置</button>
+    </div>
+    <div class="b-calib" id="calib-panel" ${state.calibOpen ? "" : "hidden"}>${state.calibOpen ? calibPanelHtml() : ""}</div>
   </section>`;
 }
+
+/* ---------- 站点位置校准（把站点拖到背景图上的地标） ---------- */
+
+function calibAuto(n) {
+  const pos = [];
+  const perRow = n <= 5 ? n : 4;
+  const rows = Math.ceil(n / perRow);
+  for (let i = 0; i < n; i += 1) {
+    const row = Math.floor(i / perRow);
+    const col = row % 2 === 1 ? perRow - 1 - (i % perRow) : i % perRow;
+    const rowSpan = rows <= 1 ? 0 : 100 / rows;
+    pos.push({
+      x: perRow <= 1 ? 50 : 10 + (col * 80) / Math.max(perRow - 1, 1),
+      y: perRow <= 1 ? 18 + (i * 56) / Math.max(n - 1, 1) : 14 + rowSpan * (row + 0.5),
+    });
+  }
+  return pos;
+}
+
+function calibPanelHtml() {
+  const d = state.draft;
+  if (!d) return "";
+  const bg = refSrc(d.map && d.map.background);
+  const stops = d.stops || [];
+  if (!bg) {
+    return '<p class="b-muted" style="padding:12px">先选一张地图背景，再校准站点位置。</p>';
+  }
+  if (!stops.length) {
+    return '<p class="b-muted" style="padding:12px">还没有站点，先到「行程与文案」添加站点再来校准。</p>';
+  }
+  const positions =
+    d.map && Array.isArray(d.map.positions) && d.map.positions.length === stops.length
+      ? d.map.positions
+      : calibAuto(stops.length);
+  const pts = positions
+    .map(
+      (p, i) =>
+        `<span class="b-calib-pt" data-calib-i="${i}" style="left:${p.x}%;top:${p.y}%"><b>${i + 1}</b><i>${esc((stops[i].title || "").slice(0, 6))}</i></span>`,
+    )
+    .join("");
+  return `<div class="b-calib-stage" style="background-image:url('${esc(bg)}')">${pts}</div>
+  <div class="b-flex" style="margin-top:8px">
+    <button type="button" class="b-btn b-btn-sm b-btn-ghost" data-act="calib-auto">↺ 重置为自动</button>
+    <span class="b-hint" style="margin:0">拖动数字点，对准图上的地标（尖角即标记指向）</span>
+    <span class="b-spacer"></span>
+    <button type="button" class="b-btn b-btn-sm b-btn-primary" data-act="calib-close">完成 ✓</button>
+  </div>`;
+}
+
+/* 拖动校准（pointer 事件，全局一份） */
+let calibDragIndex = null;
+function ensureCalibPositions() {
+  const d = state.draft;
+  const n = (d.stops || []).length;
+  d.map = d.map || {};
+  if (!Array.isArray(d.map.positions) || d.map.positions.length !== n) {
+    d.map.positions = calibAuto(n);
+  }
+}
+function setCalibPos(i, x, y) {
+  ensureCalibPositions();
+  state.draft.map.positions[i] = { x, y };
+  scheduleSave();
+  const pt = document.querySelector(`[data-calib-i="${i}"]`);
+  if (pt) {
+    pt.style.left = x + "%";
+    pt.style.top = y + "%";
+  }
+}
+function bindCalibPointer() {
+  window.addEventListener("pointerdown", (e) => {
+    const pt = e.target && e.target.closest ? e.target.closest("[data-calib-i]") : null;
+    if (pt && document.getElementById("calib-panel")) calibDragIndex = Number(pt.dataset.calibI);
+  });
+  window.addEventListener("pointermove", (e) => {
+    if (calibDragIndex === null) return;
+    const stage = document.querySelector("#calib-panel .b-calib-stage");
+    if (!stage) return;
+    const r = stage.getBoundingClientRect();
+    const x = ((e.clientX - r.left) / r.width) * 100;
+    const y = ((e.clientY - r.top) / r.height) * 100;
+    setCalibPos(calibDragIndex, Math.min(98, Math.max(2, x)), Math.min(98, Math.max(2, y)));
+  });
+  window.addEventListener("pointerup", () => {
+    calibDragIndex = null;
+  });
+}
+bindCalibPointer();
 
 /* ---------- 图片选择器（通用） ---------- */
 
@@ -1201,6 +1303,11 @@ async function draftToConfig(draft) {
   cfg.page.ogImage = resolve(cfg.page.ogImage || hero.coverImage);
   cfg.map = cfg.map || {};
   cfg.map.background = resolve(cfg.map.background);
+  cfg.map.markerStyle = cfg.map.markerStyle === "card" ? "card" : "pin";
+  // 校准过的站点坐标：数量与站点一致才保留，否则引擎自动排布
+  if (!Array.isArray(cfg.map.positions) || cfg.map.positions.length !== cfg.stops.length) {
+    delete cfg.map.positions;
+  }
   cfg.stops.forEach((s) => {
     s.image = resolve(s.image);
     s.icon = resolve(s.icon) || SRC.media["assets/icons/secret-pavilion.webp"];
@@ -1698,6 +1805,8 @@ async function onClick(e) {
     if (picked && picked.mapBg && isDefaultBg) {
       state.draft.map = state.draft.map || {};
       state.draft.map.background = picked.mapBg;
+      // 换背景后旧坐标不再匹配，清掉让用户重新校准或自动排布
+      delete state.draft.map.positions;
     } else if (picked && picked.mapBg && !isDefaultBg) {
       toast(
         "风格已切换，但你有自定义地图背景，已为你保留（需要的话可在地图背景处换回默认）",
@@ -1713,6 +1822,42 @@ async function onClick(e) {
         "」——已配套" + (picked && picked.mapBg && isDefaultBg ? "地图背景，" : "") +
         "到「预览与导出」查看效果",
     );
+    return;
+  }
+
+  if (act === "map-style") {
+    state.draft.map = state.draft.map || {};
+    state.draft.map.markerStyle = btn.dataset.style === "card" ? "card" : "pin";
+    previewReady = false;
+    scheduleSave();
+    rerenderCurrent(true);
+    toast(btn.dataset.style === "card" ? "已切换为卡片式标记" : "已切换为图钉式标记（尖角指向地标）");
+    return;
+  }
+
+  if (act === "calib-open") {
+    state.calibOpen = true;
+    rerenderCurrent(true);
+    setTimeout(() => {
+      const panel = document.getElementById("calib-panel");
+      if (panel) panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }, 60);
+    return;
+  }
+
+  if (act === "calib-close") {
+    state.calibOpen = false;
+    scheduleSave();
+    rerenderCurrent(true);
+    return;
+  }
+
+  if (act === "calib-auto") {
+    const d = state.draft;
+    if (d && d.map) delete d.map.positions;
+    scheduleSave();
+    rerenderCurrent(true);
+    toast("已重置为自动排列，可再拖动校准");
     return;
   }
 
@@ -2169,6 +2314,20 @@ if (qParams.get("selftest") === "1") {
     const v = Math.min(Math.max(Number(viewParam) || 0, 0), STEPS.length - 1);
     state.step = v;
     previewReady = false;
+  }
+  // 调试：?calib=1 打开校准面板（可配 ?theme=newlywed 演示配套背景）
+  const themeParam = qParams.get("theme");
+  if (themeParam && state.draft && THEMES.some((t) => t.id === themeParam)) {
+    state.draft.theme = themeParam;
+    const withBg = THEMES.find((t) => t.id === themeParam);
+    if (withBg && withBg.mapBg) {
+      state.draft.map = state.draft.map || {};
+      state.draft.map.background = withBg.mapBg;
+      delete state.draft.map.positions;
+    }
+  }
+  if (qParams.get("calib") === "1" && state.draft) {
+    state.calibOpen = true;
   }
   bind();
   renderAll();
