@@ -1506,3 +1506,20 @@ img {
     scroll-behavior: auto !important;
   }
 }
+
+/* 无封面图 / 无地图背景时的兜底外观（renderStatic 会给对应容器加 .is-plain） */
+.cover.is-plain {
+  background: linear-gradient(165deg, #7a5260 0%, #c97b84 55%, #e0a083 100%);
+}
+
+.map-wrap.is-plain {
+  background:
+    radial-gradient(120% 90% at 15% 8%, rgba(255, 255, 255, 0.65), transparent 55%),
+    linear-gradient(160deg, var(--cream), var(--paper));
+}
+
+.map-wrap.is-plain .map-route path {
+  stroke: rgba(140, 106, 96, 0.45);
+  stroke-dasharray: 2 5;
+}
+

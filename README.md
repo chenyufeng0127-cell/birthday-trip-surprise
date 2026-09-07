@@ -8,6 +8,14 @@
 - ✅ 音乐为浏览器内置合成（Web Audio），零外部依赖
 - 本仓库不含任何真实人物照片与视频
 
+## 🎨 效果预览
+
+同一份旅程的三种风格主题（标记可换成任意 emoji 或你上传的贴纸）：
+
+| 海边暖沙 | 森林 | 星光夜 |
+| --- | --- | --- |
+| ![seaside](docs/screens/theme-seaside.png) | ![forest](docs/screens/theme-forest.png) | ![starry](docs/screens/theme-starry.png) |
+
 ## ✨ 3 分钟上手
 
 **① 打开制作向导**
