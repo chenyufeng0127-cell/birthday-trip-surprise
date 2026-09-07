@@ -1023,6 +1023,65 @@ function hydratePhotos() {
 
 /* ---------- 第 3 步：AI 助手 ---------- */
 
+const LS_AI_PROVIDER = "trip-builder-ai-provider";
+
+const AI_PROVIDERS = [
+  { id: "deepseek", label: "DeepSeek", base: "https://api.deepseek.com", model: "deepseek-chat", keyHint: "platform.deepseek.com" },
+  { id: "openai", label: "OpenAI", base: "https://api.openai.com/v1", model: "gpt-4o-mini", keyHint: "platform.openai.com" },
+  { id: "zhipu", label: "智谱 GLM", base: "https://open.bigmodel.cn/api/paas/v4", model: "glm-4-flash", keyHint: "open.bigmodel.cn" },
+  { id: "moonshot", label: "Moonshot Kimi", base: "https://api.moonshot.cn/v1", model: "moonshot-v1-8k", keyHint: "platform.moonshot.cn" },
+  { id: "qwen", label: "阿里通义千问", base: "https://dashscope.aliyuncs.com/compatible-mode/v1", model: "qwen-plus", keyHint: "阿里云百炼控制台" },
+  { id: "openrouter", label: "OpenRouter（聚合）", base: "https://openrouter.ai/api/v1", model: "openai/gpt-4o-mini", keyHint: "openrouter.ai" },
+  { id: "ollama", label: "Ollama 本地（无需 Key）", base: "http://127.0.0.1:11434/v1", model: "qwen2.5:7b", keyHint: "本机安装 Ollama 即可，不联网不外发" },
+  { id: "custom", label: "自定义 OpenAI 兼容端点…", base: "", model: "", keyHint: "填写任意兼容 /chat/completions 的地址" },
+];
+
+function aiProviderById(id) {
+  return AI_PROVIDERS.find((p) => p.id === id) || AI_PROVIDERS[0];
+}
+
+/* 图片素材灵感：主题 × 用途 → 出图提示词模板 */
+const IMAGE_PURPOSES = [
+  { id: "map", label: "旅程地图背景", size: "4:5 竖幅", note: "底图只画风景与地标，站点图钉/路线由成品引擎叠加" },
+  { id: "chapter", label: "章节大图（每站一景）", size: "16:9 横幅", note: "场景氛围画，图上不要文字" },
+  { id: "cover", label: "封面大图", size: "4:5 竖幅、偏深色", note: "白色大字会压在图上，深色区域更适合" },
+  { id: "sticker", label: "贴纸 / 小图标素材", size: "1:1，透明底更好", note: "物体特写/徽章，透明背景 PNG 优先" },
+];
+
+const THEME_MATERIALS = {
+  seaside: { name: "海边暖沙", palette: "奶油粉、暖沙、海蓝", elems: "灯塔、沙滩、帆船、遮阳伞、海边小屋与栈道", vibe: "明亮轻盈的海风假日" },
+  forest: { name: "森林", palette: "鼠尾草绿、焦糖、奶油", elems: "林间木屋、松林小径、野餐、湖泊、苔石", vibe: "安静治愈的森系假日" },
+  starry: { name: "星光夜", palette: "薰衣草紫、月光金、深蓝", elems: "星空、月光下的屋顶、灯串、夜风、萤火", vibe: "浪漫入夜的星光感" },
+  newlywed: { name: "新婚燕尔", palette: "香槟金、暖白、淡玫瑰", elems: "白色礼堂与花拱、露天餐桌、热气球坪、湖心亭、花园凉亭、烛光舞台", vibe: "新婚当天清晨般温柔浪漫" },
+  christmas: { name: "圣诞颂歌", palette: "松针绿、蔓越莓红、窗灯暖金、雪地蓝白", elems: "礼物屋、圣诞树广场、暖窗姜饼屋、雪橇驯鹿、雪人花园、尖顶教堂钟楼", vibe: "雪夜温馨的节日感" },
+};
+
+function buildImagePrompt(purposeId, themeKey, detail) {
+  const purpose = IMAGE_PURPOSES.find((p) => p.id === purposeId) || IMAGE_PURPOSES[0];
+  const mat = THEME_MATERIALS[themeKey] || THEME_MATERIALS.seaside;
+  const detailLine = (detail || "").trim()
+    ? `\n画面中加入：${detail}。`
+    : "";
+  let scene = "";
+  if (purposeId === "map") {
+    scene = `水彩插画的${mat.name}主题旅行地图底图，斜俯视构图（像手绘导览图）。画面里有一条浅色蜿蜒小路串起若干风格各异、可辨识的小场地：${mat.elems}。场地之间是柔和地形分区，画面中下部留出干净区域（站点标记会叠加在这里）。`;
+  } else if (purposeId === "chapter") {
+    scene = `水彩插画的${mat.name}主题场景画：${mat.elems} 中的一处被温柔刻画为主角场景，${mat.vibe}，留出呼吸感，色调克制。`;
+  } else if (purposeId === "cover") {
+    scene = `水彩插画的${mat.name}主题封面背景：${mat.elems} 的远景氛围，画面下半部偏深/沉以便压白色大字，${mat.vibe}。`;
+  } else {
+    scene = `扁平可爱的${mat.name}主题贴纸/小图标：${mat.elems} 中单个元素的特写（圆润造型、清晰轮廓），白边或透明底，单色背景可选。`;
+  }
+  return (
+    `【${purpose.label} · ${mat.name}】\n` +
+    `${scene}${detailLine}\n` +
+    `主色：${mat.palette}。水彩绘本风，笔触柔和水彩，边缘清晰圆润，对比温和。\n` +
+    `尺寸建议：${purpose.size}（${purpose.note}）。\n` +
+    `禁止：文字、字母、水印、logo、人物面部、现代高楼、地图图钉、虚线路线、边框。\n` +
+    `生成后若偏花/偏空，追加：simpler composition, softer contrast, leave a calm area in the middle/for text。`
+  );
+}
+
 const AI_SYSTEM_PROMPT = `你是「生日旅行惊喜网页」的文案与行程助手。用户会口述一次想安排的旅程（生日/纪念日/约会惊喜）。
 
 请只输出一个 JSON 对象，不要输出任何其它文字或解释。结构如下：
@@ -1052,24 +1111,32 @@ const AI_SYSTEM_PROMPT = `你是「生日旅行惊喜网页」的文案与行程
 规则：
 - 站数 3 到 6 个，day 从 1 开始递增，可同一天多站。
 - 文案用中文，浪漫、具体、有画面感，像写给 TA 的第二人称口吻，不要空泛口号。
-- image 只能取以下之一（省略也行）：${AI_IMAGE_CHOICES.join(" / ")}。
+- image 可省略或填 ai-craft/ai-cinema/ai-depart/ai-resort/ai-bonfire/ai-omakase 之一（向导会为其它值做兜底）。
 - 最后一站在 stops 末尾补充 "opensFinale": true 和 "action": "打开最后的惊喜"。
 - 不要编造真实姓名，name 用昵称。`;
 
 function renderAssist(body) {
   body.innerHTML = `
   <section class="b-card">
-    <h2>让 AI 帮你起草</h2>
-    <p class="b-desc">跟 AI 说一句「帮我安排一次 XX」，就能得到一份可以再改的草稿。两种用法任选：
-    <br />① 直接在下面和 AI 对话（要填你自己的 DeepSeek API Key）；
-    <br />② 用任意聊天 AI（DSH / DeepSeek 网页版 / ChatGPT）——复制提示词，把返回的 JSON 粘贴回来导入。</p>
+    <h2>AI 助手</h2>
+    <p class="b-desc">三个能力，任选：
+    <br />💬 对话起草：可接 DeepSeek / OpenAI / 智谱 / Kimi / 通义 / OpenRouter / Ollama 本地…（用自己的 Key，或走粘贴）；
+    <br />🎨 图片素材灵感：按主题与用途生成可直接复制的出图提示词（无需 Key 也能用）；
+    <br />📋 粘贴导入：完全不填 Key 的万能通道。</p>
     <div class="b-tabs">
       <button class="is-on" data-act="ai-tab" data-tab="chat">💬 AI 对话</button>
+      <button data-act="ai-tab" data-tab="inspiration">🎨 图片灵感</button>
       <button data-act="ai-tab" data-tab="paste">📋 粘贴导入</button>
     </div>
     <div id="ai-pane"></div>
   </section>`;
   renderAiPane("chat", {});
+}
+
+function aiProviderOptions(selected) {
+  return AI_PROVIDERS.map(
+    (p) => `<option value="${p.id}" ${p.id === selected ? "selected" : ""}>${esc(p.label)}</option>`,
+  ).join("");
 }
 
 function renderAiPane(tab, _opts) {
@@ -1079,26 +1146,58 @@ function renderAiPane(tab, _opts) {
     b.classList.toggle("is-on", b.dataset.tab === tab);
   });
   if (tab === "chat") {
-    const d = state.draft;
-    const brief = d
-      ? (d.hero && d.hero.name ? `主角：${d.hero.name}。` : "") +
-        (d.stops.length
-          ? `目前已安排 ${d.stops.length} 站。可以让我先列出每站标题，或补写/改写某些站的文案。`
-          : "还没有站点，我可以根据你的口述安排整个行程。")
-      : "";
-    const msgs = (state.aiMessages || [])
-      .map(
-        (m) =>
-          `<div><b>${m.role === "user" ? "你" : "AI"}</b>：${esc(m.content)}</div><div style="height:8px"></div>`,
-      )
-      .join("");
-    pane.innerHTML = `<div class="b-field"><label>DeepSeek API Key <span class="b-label-tag">实验性</span>（只存在本机浏览器、直接连官方；若被浏览器拦截请改用「粘贴导入」）</label>
-      <input class="b-input" type="password" id="ai-key" value="${esc(localStorage.getItem(LS_AI_KEY) || "")}" placeholder="sk-…" /></div>
+    renderChatPane(pane);
+  } else if (tab === "inspiration") {
+    renderInspirationPane(pane);
+  } else {
+    renderPastePane(pane);
+  }
+}
+
+function currentProviderId() {
+  const saved = localStorage.getItem(LS_AI_PROVIDER);
+  return AI_PROVIDERS.some((p) => p.id === saved) ? saved : "deepseek";
+}
+
+function renderChatPane(pane) {
+  const d = state.draft;
+  const brief = d
+    ? (d.hero && d.hero.name ? `主角：${d.hero.name}。` : "") +
+      (d.stops.length
+        ? `目前已安排 ${d.stops.length} 站。可以让我先列出每站标题，或补写/改写某些站的文案。`
+        : "还没有站点，我可以根据你的口述安排整个行程。")
+    : "";
+  const msgs = (state.aiMessages || [])
+    .map(
+      (m) =>
+        `<div><b>${m.role === "user" ? "你" : "AI"}</b>：${esc(m.content)}</div><div style="height:8px"></div>`,
+    )
+    .join("");
+  const provId = currentProviderId();
+  const prov = aiProviderById(provId);
+  const savedKey = localStorage.getItem(LS_AI_KEY) || "";
+  const savedBase = localStorage.getItem(LS_AI_BASE) || prov.base;
+  const savedModel = localStorage.getItem(LS_AI_MODEL) || prov.model;
+  pane.innerHTML = `<div class="b-field"><label>选择模型（费用走你自己的账户；Ollama 本地则完全无需 Key）</label>
+      <select class="b-select" data-ai-provider>${aiProviderOptions(provId)}</select></div>
+      <div class="b-field"><label>API Key</label>
+        <div class="b-flex">
+          <input class="b-input" style="flex:1;min-width:0" type="password" id="ai-key" value="${esc(savedKey)}" placeholder="${prov.id === "ollama" ? "本地无需 Key，留空即可" : "sk-…，在 " + prov.keyHint + " 获取"}" autocomplete="off" />
+          <button type="button" class="b-btn b-btn-sm b-btn-ghost" data-act="ai-key-eye" title="显示 / 隐藏">👁</button>
+        </div>
+        <p class="b-hint">Key 只保存在你自己的浏览器里，直连你选的接口，不会进入导出文件；不填也能用「🎨 图片灵感 / 📋 粘贴导入」。</p></div>
       <div class="b-row">
-        <div class="b-field"><label>接口地址（一般不用改）</label>
-          <input class="b-input" id="ai-base" value="${esc(localStorage.getItem(LS_AI_BASE) || AI_DEFAULT_BASE)}" /></div>
-        <div class="b-field"><label>模型</label>
-          <input class="b-input" id="ai-model" value="${esc(localStorage.getItem(LS_AI_MODEL) || AI_DEFAULT_MODEL)}" /></div>
+        <div class="b-field"><label>接口地址</label>
+          <input class="b-input" id="ai-base" value="${esc(savedBase)}" /></div>
+        <div class="b-field"><label>模型名</label>
+          <input class="b-input" id="ai-model" value="${esc(savedModel)}" /></div>
+      </div>
+      <div class="b-flex" style="margin:2px 0 10px">
+        <label style="display:flex;gap:6px;align-items:center;font-size:12px;color:var(--bk-muted)">
+          <input type="checkbox" id="ai-persist" ${localStorage.getItem(LS_AI_KEY) !== null ? "checked" : ""} /> 记住我的 Key（存本机浏览器）
+        </label>
+        <span class="b-spacer"></span>
+        <button type="button" class="b-btn b-btn-sm b-btn-ghost" data-act="ai-key-clear">清除已保存 Key</button>
       </div>
       <div class="b-note">${esc(brief)}</div>
       <div class="b-ai-log" id="ai-log">${msgs || '<span class="b-muted">打个招呼吧，比如：帮我把这次周末两天一夜的惊喜之旅安排成 4 站…</span>'}</div>
@@ -1110,9 +1209,11 @@ function renderAiPane(tab, _opts) {
         <span class="b-spacer"></span>
         <button class="b-btn b-btn-sm b-btn-ghost" data-act="ai-clear">清空对话</button>
       </div>
-      <p class="b-hint" style="margin-top:8px">若直连被浏览器拦截（CORS），改用「粘贴导入」：把这段提示词复制给任意 AI，把返回的 JSON 粘回来即可。</p>`;
-  } else {
-    pane.innerHTML = `<div class="b-field"><label>1 · 复制这段提示词，发给任意 AI（DSH / DeepSeek 网页版 / ChatGPT…）</label>
+      <p class="b-hint" style="margin-top:8px">安全说明：向导是纯本地网页——Key 只发往你选的接口、不经任何第三方服务器；被浏览器拦截（CORS）时请改用「📋 粘贴导入」（无需 Key）；想完全零 Key 可装 Ollama 本地。</p>`;
+}
+
+function renderPastePane(pane) {
+  pane.innerHTML = `<div class="b-field"><label>1 · 复制这段提示词，发给任意 AI（DSH / 豆包 / DeepSeek / ChatGPT…）</label>
       <textarea class="b-textarea code" readonly rows="6" id="ai-prompt">${esc(AI_SYSTEM_PROMPT)}</textarea>
       <div style="height:8px"></div>
       <button class="b-btn b-btn-sm" data-act="ai-copy-prompt">复制提示词</button>
@@ -1121,6 +1222,100 @@ function renderAiPane(tab, _opts) {
       <textarea class="b-textarea code" rows="10" id="ai-json" placeholder='{"hero":{...},"stops":[...]}'></textarea>
       <div style="height:8px"></div>
       <button class="b-btn b-btn-primary" data-act="ai-import">导入（会覆盖行程与主角信息）</button></div>`;
+}
+
+function renderInspirationPane(pane) {
+  const themeKey = (state.draft && state.draft.theme) || "seaside";
+  pane.innerHTML = `<p class="b-desc">按主题与用途生成「可直接复制」的出图提示词——粘贴到即梦 / 豆包 / Midjourney 等生成，再把图传回本向导对应素材位。无需 Key。</p>
+    <div class="b-row">
+      <div class="b-field"><label>用途</label>
+        <select class="b-select" id="insp-purpose">${IMAGE_PURPOSES.map((p) => `<option value="${p.id}">${esc(p.label)}</option>`).join("")}</select></div>
+      <div class="b-field"><label>主题风格</label>
+        <select class="b-select" id="insp-theme">${Object.entries(THEME_MATERIALS).map(([id, m]) => `<option value="${id}" ${id === themeKey ? "selected" : ""}>${esc(m.name)}</option>`).join("")}</select></div>
+    </div>
+    <div class="b-field"><label>出图提示词</label>
+      <textarea class="b-textarea code" readonly rows="9" id="insp-out"></textarea>
+      <div style="height:8px"></div>
+      <button class="b-btn b-btn-primary" data-act="insp-copy">📋 复制提示词</button></div>
+    <div class="b-field"><label>想让 AI 按你的画面想法定制？（需在「AI 对话」保存过 Key）</label>
+      <textarea class="b-textarea" id="insp-detail" placeholder="如：这一站是海边傍晚第一次放烟花的时刻…"></textarea>
+      <div style="height:8px"></div>
+      <button class="b-btn b-btn-sm" data-act="insp-gen">✨ 让 AI 定制这段提示词</button>
+    </div>`;
+  refreshInspiration();
+}
+
+function refreshInspiration() {
+  const out = document.getElementById("insp-out");
+  if (!out) return;
+  const purpose = (document.getElementById("insp-purpose") || {}).value || IMAGE_PURPOSES[0].id;
+  const theme = (document.getElementById("insp-theme") || {}).value || "seaside";
+  out.value = buildImagePrompt(purpose, theme, "");
+}
+
+function inspDetailPrompt() {
+  const purpose = (document.getElementById("insp-purpose") || {}).value || IMAGE_PURPOSES[0].id;
+  const theme = (document.getElementById("insp-theme") || {}).value || "seaside";
+  const detail = (document.getElementById("insp-detail") || {}).value || "";
+  return buildImagePrompt(purpose, theme, detail);
+}
+
+/* 用所配 LLM 定制出图提示词 */
+async function genInspirationAi() {
+  const promptText = inspDetailPrompt();
+  const prov = aiProviderById(currentProviderId());
+  const key = localStorage.getItem(LS_AI_KEY) || "";
+  const base = (localStorage.getItem(LS_AI_BASE) || prov.base || AI_DEFAULT_BASE).replace(/\/+$/, "");
+  const model = localStorage.getItem(LS_AI_MODEL) || prov.model || AI_DEFAULT_MODEL;
+  if (!key && prov.id !== "ollama") {
+    toast("请先在「AI 对话」里选择模型并保存 Key（或用 Ollama 本地）");
+    renderAiPane("chat", {});
+    return;
+  }
+  toast("正在生成定制提示词…");
+  const headers = { "Content-Type": "application/json" };
+  if (key) headers.Authorization = "Bearer " + key;
+  try {
+    const resp = await fetch(base + "/chat/completions", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        model,
+        messages: [
+          {
+            role: "system",
+            content:
+              "你是资深 AI 出图提示词专家。把用户提供的出图需求润色成一段结构更细腻、可直接粘贴给即梦/Midjourney 等工具的中文提示词：包含画面层次、光线、笔触与构图留白；保留所有禁止项（无文字/水印/logo/人物面部等）。只输出提示词本体，不要任何解释。",
+          },
+          { role: "user", content: promptText },
+        ],
+        temperature: 0.9,
+        max_tokens: 1200,
+        stream: false,
+      }),
+    });
+    if (!resp.ok) {
+      const d = await resp.text().catch(() => "");
+      throw new Error("HTTP " + resp.status + " " + d.slice(0, 120));
+    }
+    const data = await resp.json();
+    const out =
+      data.choices && data.choices[0] && data.choices[0].message
+        ? data.choices[0].message.content
+        : "";
+    const el = document.getElementById("insp-out");
+    if (el && out) {
+      el.value = out.trim();
+      toast("已生成定制提示词，可复制去生图");
+    } else {
+      toast("AI 没有返回内容，请重试或改走粘贴通道");
+    }
+  } catch (err) {
+    console.error(err);
+    toast(
+      "生成失败：" + ((err && err.message) || err) +
+        " —— 可用任意 AI 手动润色后复制回来",
+    );
   }
 }
 
@@ -1131,29 +1326,33 @@ async function sendAiMessage() {
     toast("先告诉我你想安排什么");
     return;
   }
+  const prov = aiProviderById(currentProviderId());
   const key = ($("ai-key").value || "").trim();
-  if (!key) {
-    toast("先填写 DeepSeek API Key（platform.deepseek.com 获取，很便宜）");
+  const base = ($("ai-base").value || prov.base || AI_DEFAULT_BASE).replace(/\/+$/, "");
+  const model = $("ai-model").value || prov.model || AI_DEFAULT_MODEL;
+  if (!key && prov.id !== "ollama") {
+    toast("请填写所选模型的 API Key（获取地址：" + prov.keyHint + "），或改用「粘贴导入 / Ollama 本地」");
     return;
   }
-  const base = ($("ai-base").value || AI_DEFAULT_BASE).replace(/\/+$/, "");
-  const model = $("ai-model").value || AI_DEFAULT_MODEL;
-  localStorage.setItem(LS_AI_KEY, key);
+  // Key 持久化策略：默认存本机（可一键清除）；取消勾选则只在本会话内存使用
+  const persist = !($("ai-persist") && !$("ai-persist").checked);
+  localStorage.setItem(LS_AI_PROVIDER, prov.id);
   localStorage.setItem(LS_AI_BASE, base);
   localStorage.setItem(LS_AI_MODEL, model);
+  if (persist && key) localStorage.setItem(LS_AI_KEY, key);
+  else if (!persist) localStorage.removeItem(LS_AI_KEY);
 
   state.aiMessages.push({ role: "user", content: text });
   state.aiMessages.push({ role: "assistant", content: "（思考中…）" });
   renderAiPane("chat", {});
   const log = $("ai-log");
   if (log) log.scrollTop = log.scrollHeight;
+  const headers = { "Content-Type": "application/json" };
+  if (key) headers.Authorization = "Bearer " + key;
   try {
     const resp = await fetch(base + "/chat/completions", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer " + key,
-      },
+      headers,
       body: JSON.stringify({
         model,
         messages: [
@@ -1540,6 +1739,28 @@ function onInput(e) {
 function onChange(e) {
   const t = e.target;
   if (!t.dataset) return;
+  if (t.dataset.aiProvider !== undefined) {
+    // AI Provider 预设联动 base/model/key 提示
+    const p = aiProviderById(t.value);
+    const baseEl = document.getElementById("ai-base");
+    if (baseEl && p.base) baseEl.value = p.base;
+    const modelEl = document.getElementById("ai-model");
+    if (modelEl && p.model) modelEl.value = p.model;
+    const keyEl = document.getElementById("ai-key");
+    if (keyEl) {
+      keyEl.placeholder =
+        p.id === "ollama"
+          ? "本地无需 Key，留空即可"
+          : "sk-…，在 " + p.keyHint + " 获取";
+      if (p.id === "ollama") keyEl.value = "";
+    }
+    localStorage.setItem(LS_AI_PROVIDER, p.id);
+    return;
+  }
+  if (t.id === "insp-purpose" || t.id === "insp-theme") {
+    refreshInspiration();
+    return;
+  }
   if (t.type === "file") {
     handleUpload(t);
     return;
@@ -2053,15 +2274,46 @@ async function onClick(e) {
   if (act === "ai-copy-prompt") {
     const el = $("ai-prompt");
     if (!el) return;
-    el.select();
-    el.setSelectionRange(0, 99999);
+    await copyText(el.value);
+    return;
+  }
+
+  if (act === "ai-key-eye") {
+    const el = $("ai-key");
+    if (!el) return;
+    const isPw = el.type === "password";
+    el.type = isPw ? "text" : "password";
+    btn.textContent = isPw ? "🙈" : "👁";
+    return;
+  }
+
+  if (act === "ai-key-clear") {
+    localStorage.removeItem(LS_AI_KEY);
+    const el = $("ai-key");
+    if (el) el.value = "";
+    toast("已清除本机保存的 Key");
+    return;
+  }
+
+  if (act === "insp-copy") {
+    const el = $("insp-out");
+    if (!el) return;
+    await copyText(el.value);
+    return;
+  }
+
+  if (act === "insp-gen") {
+    genInspirationAi();
+    return;
+  }
+
+  async function copyText(value) {
     try {
-      await navigator.clipboard.writeText(el.value);
-      toast("提示词已复制");
+      await navigator.clipboard.writeText(value || "");
+      toast("已复制到剪贴板");
     } catch (err) {
       toast("请手动复制上方文本");
     }
-    return;
   }
 
   if (act === "ai-send") {
@@ -2394,4 +2646,9 @@ if (qParams.get("selftest") === "1") {
   bind();
   renderAll();
   updateStorageLabel();
+  // 调试：?aitab=chat|inspiration|paste 直达 AI 子页
+  const aitab = qParams.get("aitab");
+  if (aitab && document.getElementById("ai-pane")) {
+    renderAiPane(aitab === "inspiration" || aitab === "paste" ? aitab : "chat", {});
+  }
 }
