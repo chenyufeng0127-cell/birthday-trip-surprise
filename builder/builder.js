@@ -175,8 +175,8 @@ function sampleDraft() {
 /* 成品风格主题 */
 const THEMES = [
   { id: "seaside", label: "海边暖沙", note: "奶油粉与暖沙，海风一样轻", swatch: ["#f7c9cf", "#e58b9e", "#4f9aa0"], mapBg: "m:assets/map/map-seaside.webp" },
-  { id: "forest", label: "森林", note: "鼠尾草绿与焦糖，安静治愈", swatch: ["#dfe8d2", "#8aa668", "#5e9277"] },
-  { id: "starry", label: "星光夜", note: "薰衣草紫与月光金，浪漫入夜", swatch: ["#ddd2f1", "#8d7cc9", "#e0c190"] },
+  { id: "forest", label: "森林", note: "树屋茶屋与溪桥篝火，鼠尾草绿与焦糖", swatch: ["#dfe8d2", "#8aa668", "#5e9277"], mapBg: "m:assets/map/map-forest.jpg" },
+  { id: "starry", label: "星光夜", note: "观星丘与月光码头，薰衣草紫与星光金", swatch: ["#ddd2f1", "#8d7cc9", "#e0c190"], mapBg: "m:assets/map/map-starry.jpg" },
   { id: "newlywed", label: "新婚燕尔", note: "香槟金与暖白，白纱、花亭与清晨的光", swatch: ["#f6dccc", "#d9a869", "#8fae9e"], mapBg: "m:assets/map/map-honeymoon.jpg" },
   { id: "christmas", label: "圣诞颂歌", note: "雪夜小屋与暖窗，松针绿与红金灯", swatch: ["#dde8e3", "#a23b48", "#5c8f7f"], mapBg: "m:assets/map/map-christmas.jpg" },
 ];
