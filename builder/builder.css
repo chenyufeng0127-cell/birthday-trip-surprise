@@ -874,3 +874,96 @@ textarea.code {
 .b-calib-pt:active {
   cursor: grabbing;
 }
+
+/* ---------- 章节成品预览卡（本站大图 + 文字成品排版） ---------- */
+.b-stop-preview {
+  display: flex;
+  gap: 12px;
+  margin: 0 0 14px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid var(--bk-line);
+}
+
+.b-stop-preview .sp-media {
+  flex: 0 0 34%;
+  min-width: 96px;
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+
+.b-stop-preview .sp-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.b-stop-preview .sp-noph {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #c9b8b0;
+  font-size: 12px;
+  background: #f3ece4;
+}
+
+.b-stop-preview .sp-body {
+  flex: 1;
+  padding: 10px 12px 10px 0;
+  min-width: 0;
+}
+
+.b-stop-preview .sp-day {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--bk-accent);
+}
+
+.b-stop-preview h4 {
+  margin: 2px 0 4px;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+  font-size: 17px;
+  color: var(--bk-ink);
+  line-height: 1.3;
+}
+
+.b-stop-preview .sp-short {
+  font-size: 12px;
+  color: var(--bk-muted);
+  margin-bottom: 4px;
+}
+
+.b-stop-preview .sp-story {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.b-stop-preview .sp-story p {
+  font-family: "Songti SC", "Noto Serif SC", serif;
+  font-size: 12px;
+  line-height: 1.8;
+  color: #4a403c;
+}
+
+.b-stop-preview .sp-mood {
+  margin-top: 5px;
+  font-family: "Songti SC", "Noto Serif SC", serif;
+  font-size: 12px;
+  color: var(--bk-accent);
+}
+
+/* ---------- 章节大图图库大格 ---------- */
+.b-sticker-lg {
+  width: 84px;
+  height: 64px;
+}
+
+.b-sticker-lg img {
+  border-radius: 12px;
+}

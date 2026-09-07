@@ -150,6 +150,7 @@ function cfgToDraft(cfg) {
     stop.image = toRef(stop.image);
     stop.icon = toRef(stop.icon);
     stop.iconRefs = (stop.iconRefs || []).map(toRef); // 贴纸收藏
+    stop.imageRefs = (stop.imageRefs || []).map(toRef); // 章节大图图库
     stop.gallery = (stop.gallery || []).map(toRef);
     (stop.videos || []).forEach((v) => {
       v.src = toRef(v.src);
@@ -269,7 +270,7 @@ function rerenderCurrent(keepScroll) {
 
 function refreshLive() {
   if (document.getElementById("cover-live")) refreshCoverLive();
-  refreshStopLives();
+  refreshStopPreviews();
 }
 
 function setLiveText(id, value, emptyHint) {
@@ -382,17 +383,29 @@ function fillCoverFrame() {
   if ($d("cover-couple-note")) $d("cover-couple-note").textContent = h.coupleNote || "";
 }
 
-function refreshStopLives() {
+function refreshStopPreviews() {
   const stops = (state.draft && state.draft.stops) || [];
   stops.forEach((s, i) => {
-    const sEl = document.getElementById("story-live-" + i);
-    if (sEl) {
-      const paras = (s.story || []).filter((t) => t.trim());
-      sEl.innerHTML = paras.length
-        ? paras.map((t) => `<p>${esc(t)}</p>`).join("")
-        : '<i class="b-muted">（还没写正文）</i>';
+    const el = document.getElementById("stop-preview-" + i);
+    if (!el) return;
+    let media = "";
+    const imgSrc = refSrc(s.image);
+    if (imgSrc) {
+      media = `<img src="${esc(imgSrc)}" alt="" />`;
+    } else if (typeof s.image === "string" && s.image.startsWith("u:")) {
+      media = `<img src="" alt="" data-u="${esc(s.image.slice(2))}" style="display:none" /><span class="b-sticker-load">…</span>`;
+    } else {
+      media = '<span class="sp-noph">（未设大图）</span>';
     }
-    setLiveText("mood-live-" + i, s.mood, "（还没写心情）");
+    const paras = (s.story || []).filter((t) => t.trim());
+    el.innerHTML = `<div class="sp-media">${media}</div>
+      <div class="sp-body">
+        <p class="sp-day">DAY ${esc(s.day || 1)}</p>
+        <h4>${esc(s.title || "（未命名的一站）")}</h4>
+        ${(s.short || "").trim() ? `<p class="sp-short">${esc(s.short)}</p>` : ""}
+        <div class="sp-story">${paras.length ? paras.map((t) => `<p>${esc(t)}</p>`).join("") : '<i class="b-muted">（还没写正文）</i>'}</div>
+        ${(s.mood || "").trim() ? `<p class="sp-mood">${esc(s.mood)}</p>` : ""}
+      </div>`;
   });
 }
 
@@ -784,6 +797,29 @@ function iconStickerGrid(stop, stopIdx) {
   return `<div class="b-stickers">${cards}</div>`;
 }
 
+/* 章节大图图库：多张并存、点选设为当前、单张 ✕ 删除 */
+function imageStickerGrid(stop, stopIdx) {
+  const refs = stop.imageRefs || [];
+  if (!refs.length) return "";
+  const cards = refs
+    .map((ref, ri) => {
+      const isCur = ref === stop.image;
+      const u = ref.startsWith("u:") ? ref.slice(2) : null;
+      const cached = u ? state.uiPhotoCache[u] : null;
+      const inner = cached
+        ? `<img src="${cached}" alt="" />`
+        : u
+          ? `<img src="" alt="" data-u="${u}" style="display:none" /><i class="b-sticker-load">…</i>`
+          : `<b>${esc(ref)}</b>`;
+      return `<span class="b-sticker b-sticker-lg${isCur ? " is-on" : ""}" title="${isCur ? "当前大图" : "点我设为当前大图"}" data-act="image-select" data-stop="${stopIdx}" data-ri="${ri}">
+        ${inner}
+        <button type="button" class="b-sticker-x" aria-label="删除这张图" data-act="image-ref-del" data-stop="${stopIdx}" data-ri="${ri}">✕</button>
+      </span>`;
+    })
+    .join("");
+  return `<div class="b-stickers">${cards}</div>`;
+}
+
 function renderStops(body) {
   const d = state.draft;
   if (!d.stops.length) {
@@ -844,6 +880,7 @@ function renderStops(body) {
           <span class="b-muted">${open ? "收起 ▴" : "展开 ▾"}</span>
         </div>
         <div class="b-stop-body">
+          <div class="b-stop-preview" id="stop-preview-${i}" aria-hidden="true"></div>
           <div class="b-field"><label>站点名 *</label>
             <input class="b-input" data-p="stops.${i}.title" value="${esc(stop.title || "")}" placeholder="如：印记工坊" />
             <p class="b-hint">→ 出现在：地图上的站点标记 + 章节页大标题</p></div>
@@ -859,11 +896,10 @@ function renderStops(body) {
             <p class="b-hint">→ 出现在：章节页的「这一站是…」小标签</p></div>
           <div class="b-field"><label>正文故事（每行一段，TA 会逐段阅读）</label>
             <textarea class="b-textarea" style="min-height:110px" data-p="stops.${i}.story" data-lines="1" placeholder="每行一段……">${esc((stop.story || []).join("\n"))}</textarea>
-            <p class="b-hint">→ 出现在：章节正文，成品效果见下方（随输入更新）：</p>
-            <div class="b-story-live" id="story-live-${i}" aria-hidden="true"></div></div>
+            <p class="b-hint">→ 出现在：章节正文，会实时显示在本站顶部预览卡里（随输入更新）</p></div>
           <div class="b-field"><label>这一站的心情（一句话）</label>
             <input class="b-input" data-p="stops.${i}.mood" value="${esc(stop.mood || "")}" placeholder="如：有些约定不必说出口，戴在手上就够了。" />
-            <p class="b-hint">→ 出现在：章节页的「心情」卡片。成品效果：<em class="b-mood-live" id="mood-live-${i}"></em></p></div>
+            <p class="b-hint">→ 出现在：章节页的「心情」卡片（顶部预览卡可见样式）</p></div>
           <div class="b-row">
             <div class="b-field"><label>小任务（可留空）</label>
               <input class="b-input" data-p="stops.${i}.task" value="${esc(stop.task || "")}" placeholder="如：把两件作品放在一起合影" />
@@ -884,13 +920,16 @@ function renderStops(body) {
               </span>
             </div>
             <p class="b-hint">可收藏多张贴纸再任选一张（点它即生效）；贴纸右上角 ✕ 删除单个；预设图标点选即用；emoji 输入即用。地图上显示 52px 圆角框，普通照片建议放到「章节大图」。</p></div>
-          <div class="b-field"><label>章节大图（进入这一站看到的大图）</label>
+          <div class="b-field"><label>章节大图（进入这一站看到的大图 · 图库式）</label>
             <div class="b-pick">
-              ${thumbBlock("stops.${i}.image", stop.image || "")}
+              ${imageStickerGrid(stop, i)}
               ${imageChips}
-              <button class="b-btn b-btn-sm" data-act="pick-upload" data-path="stops.${i}.image" data-multi="0">📷 用自己的照片</button>
-              ${stop.image ? `<button class="b-btn b-btn-sm b-btn-ghost" data-act="pick-clear" data-path="stops.${i}.image">清除</button>` : ""}
-            </div></div>
+              <span class="b-flex" style="width:100%">
+                <button class="b-btn b-btn-sm" data-act="image-upload" data-stop="${i}">📷 加入图库（可多张）</button>
+                ${stop.image ? `<button class="b-btn b-btn-sm b-btn-ghost" data-act="pick-clear" data-path="stops.${i}.image">清除当前</button>` : ""}
+              </span>
+            </div>
+            <p class="b-hint">图库可存多张，任点一张设为当前；右上 ✕ 删除单张。加入的图不会因点选其它图而消失；预设插画点选即用。当前图显示在本站顶部预览卡。</p></div>
           <div class="b-field"><label>这一站的照片（进照片墙和回忆册）</label>
             <div class="b-photos">
               ${pics}
@@ -1207,6 +1246,7 @@ function applyAiJson(json) {
     image: aiImageToRef(s.image),
     gallery: [],
     iconRefs: [],
+    imageRefs: [],
     galleryCaption: [],
     icon: "m:assets/icons/secret-pavilion.webp",
     music: aiImageToMusic(s.image),
@@ -1321,7 +1361,8 @@ async function draftToConfig(draft) {
       caption: v.caption || "",
     }))).filter((v) => v.src);
     if (!s.id) s.id = uid();
-    delete s.iconRefs; // 收藏贴纸列表只在编辑器里用，成品引擎只用 icon
+    delete s.iconRefs; // 收藏贴纸/图库只在编辑器里用，成品引擎只用 icon/image
+    delete s.imageRefs;
   });
   cfg.copy = cfg.copy && Object.keys(cfg.copy).length ? cfg.copy : defaultCopy();
   if (!["seaside", "forest", "starry", "newlywed", "christmas"].includes(cfg.theme)) cfg.theme = "seaside";
@@ -1628,11 +1669,18 @@ async function handleUpload(input) {
 }
 
 /* 把选择的图片文件加入某站的「贴纸收藏」：可多张、不替换已有、无当前图标时自动用第一张 */
-async function addStickers(stopIdx, fileList) {
+/* 把选择的多张图加入某站的「素材库」（field: iconRefs 贴纸库 / imageRefs 大图库）。
+ * 只入库与预览，不覆盖当前选中；当前为空时才自动用第一张。 */
+async function addStickers(stopIdx, field, fileList) {
   const stop = (state.draft.stops || [])[stopIdx];
   if (!stop || !fileList || !fileList.length) return;
-  toast("正在压缩并保存贴纸…");
-  const result = await PhotoLib.filesToPhotos(fileList);
+  const list = Array.from(fileList || []).filter((f) => f.type.startsWith("image/"));
+  if (!list.length) {
+    toast("没有可用的图片（请选择 JPG/PNG）");
+    return;
+  }
+  toast("正在压缩并加入素材库…");
+  const result = await PhotoLib.filesToPhotos(list);
   const ids = result.added;
   if (!ids.length) {
     toast(
@@ -1643,10 +1691,11 @@ async function addStickers(stopIdx, fileList) {
     );
     return;
   }
-  if (!Array.isArray(stop.iconRefs)) stop.iconRefs = [];
+  if (!Array.isArray(stop[field])) stop[field] = [];
   const refs = ids.map((id) => "u:" + id);
-  stop.iconRefs = stop.iconRefs.concat(refs);
-  if (!stop.icon) stop.icon = refs[0];
+  stop[field] = stop[field].concat(refs);
+  const currentKey = field === "imageRefs" ? "image" : "icon";
+  if (!stop[currentKey]) stop[currentKey] = refs[0]; // 原本没有当前图才自动用第一张
   await Promise.all(
     ids.map((id) =>
       PhotoLib.getPhoto(id).then((d) => {
@@ -1655,7 +1704,10 @@ async function addStickers(stopIdx, fileList) {
     ),
   );
   scheduleSave();
-  toast("已收藏 " + refs.length + " 张贴纸——点击某张贴纸即可设为当前图标");
+  toast(
+    "已加入素材库 " + refs.length + " 张（不会覆盖你已选的图）——点击某张即可设为当前" +
+      (field === "imageRefs" ? "大图" : "图标"),
+  );
   rerenderCurrent(true);
   hydratePhotos();
 }
@@ -1860,34 +1912,39 @@ async function onClick(e) {
     return;
   }
 
-  if (act === "icon-upload") {
+  if (act === "icon-upload" || act === "image-upload") {
+    const field = act === "image-upload" ? "imageRefs" : "iconRefs";
     const stopIdx = Number(btn.dataset.stop);
     const input = document.createElement("input");
     input.type = "file";
     input.accept = "image/*";
     input.multiple = true;
-    input.addEventListener("change", () => addStickers(stopIdx, input.files));
+    input.addEventListener("change", () => addStickers(stopIdx, field, input.files));
     input.click();
     return;
   }
 
-  if (act === "icon-select") {
+  if (act === "icon-select" || act === "image-select") {
+    const field = act === "image-select" ? "imageRefs" : "iconRefs";
+    const curKey = act === "image-select" ? "image" : "icon";
     const stop = (state.draft.stops || [])[Number(btn.dataset.stop)];
-    const ref = stop && (stop.iconRefs || [])[Number(btn.dataset.ri)];
-    if (ref && stop.icon !== ref) {
-      stop.icon = ref;
+    const ref = stop && (stop[field] || [])[Number(btn.dataset.ri)];
+    if (ref && stop[curKey] !== ref) {
+      stop[curKey] = ref;
       scheduleSave();
       rerenderCurrent(true);
     }
     return;
   }
 
-  if (act === "icon-ref-del") {
+  if (act === "icon-ref-del" || act === "image-ref-del") {
+    const field = act === "image-ref-del" ? "imageRefs" : "iconRefs";
+    const curKey = act === "image-ref-del" ? "image" : "icon";
     const stop = (state.draft.stops || [])[Number(btn.dataset.stop)];
     const ri = Number(btn.dataset.ri);
-    if (!stop || !Array.isArray(stop.iconRefs)) return;
-    const removed = stop.iconRefs.splice(ri, 1)[0];
-    if (stop.icon === removed) stop.icon = "";
+    if (!stop || !Array.isArray(stop[field])) return;
+    const removed = stop[field].splice(ri, 1)[0];
+    if (stop[curKey] === removed) stop[curKey] = "";
     releasePhotoIfOrphan(removed);
     scheduleSave();
     rerenderCurrent(true);
@@ -1914,6 +1971,7 @@ async function onClick(e) {
       music: "cover",
       gallery: [],
       iconRefs: [],
+      imageRefs: [],
       galleryCaption: [],
       action: "继续旅程",
     });
@@ -2327,6 +2385,11 @@ if (qParams.get("selftest") === "1") {
   }
   if (qParams.get("calib") === "1" && state.draft) {
     state.calibOpen = true;
+  }
+  // 调试：?openstop=N 展开某一站
+  const openParam = qParams.get("openstop");
+  if (openParam !== null && state.draft) {
+    state.stopOpen.add(Math.min(Math.max(Number(openParam) || 0, 0), (state.draft.stops || []).length - 1));
   }
   bind();
   renderAll();
