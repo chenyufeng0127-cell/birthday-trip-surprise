@@ -694,3 +694,89 @@ textarea.code {
   color: var(--bk-muted);
   font-size: 13px;
 }
+
+/* ---------- 实时小样（所见即所得） ---------- */
+.cover-live {
+  margin: 10px 0 4px;
+  padding: 24px 18px 20px;
+  border-radius: 18px;
+  text-align: center;
+  color: #fff;
+  background:
+    radial-gradient(120% 100% at 50% 0%, rgba(255, 255, 255, 0.12), transparent 60%),
+    linear-gradient(160deg, #7a5260 0%, #c97b84 58%, #dfa083 100%);
+  box-shadow: 0 14px 30px rgba(138, 96, 100, 0.28);
+}
+
+.cover-live .cl-kicker {
+  display: inline-block;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  margin-bottom: 14px;
+}
+
+.cover-live .cl-title {
+  font-family: "Songti SC", "Noto Serif SC", serif;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.25;
+  white-space: pre-line;
+}
+
+.cover-live .cl-sub {
+  font-size: 12.5px;
+  line-height: 1.9;
+  color: rgba(255, 255, 255, 0.94);
+  margin-top: 10px;
+}
+
+.cover-live .cl-couple {
+  margin-top: 16px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.cover-live .cl-note {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.82);
+  margin-top: 2px;
+}
+
+.cover-live .is-empty {
+  opacity: 0.55;
+}
+
+.b-story-live {
+  margin: 6px 0 4px;
+  padding: 12px 14px;
+  border: 1px dashed var(--bk-line);
+  border-radius: 12px;
+  background: #fffaf2;
+}
+
+.b-story-live p {
+  font-family: "Songti SC", "Noto Serif SC", serif;
+  font-size: 15px;
+  line-height: 1.95;
+  color: #4a403c;
+}
+
+.b-story-live p + p {
+  margin-top: 6px;
+}
+
+.b-mood-live {
+  font-family: "Songti SC", "Noto Serif SC", serif;
+  font-size: 14px;
+  color: var(--bk-accent);
+  margin-left: 4px;
+  white-space: normal;
+}
+
+.b-field .b-hint em.is-empty,
+.b-mood-live.is-empty {
+  color: var(--bk-muted);
+}

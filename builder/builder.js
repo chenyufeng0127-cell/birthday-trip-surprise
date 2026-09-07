@@ -239,6 +239,7 @@ function renderAll() {
     renderStep(body, "welcome");
   } else {
     renderStep(body, STEPS[state.step].id);
+    refreshLive(); // 渲染完立即填充封面/正文实时小样
   }
   renderNav();
 }
@@ -256,7 +257,58 @@ function rerenderCurrent(keepScroll) {
   const body = $("b-body");
   const stepId = STEPS[state.step].id;
   renderStep(body, stepId);
+  refreshLive();
   window.scrollTo(0, y);
+}
+
+/* ---------- 实时小样：编辑时即时显示文字会以什么样子出现在成品 ---------- */
+
+function refreshLive() {
+  if (document.getElementById("cover-live")) refreshCoverLive();
+  refreshStopLives();
+}
+
+function setLiveText(id, value, emptyHint) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const v = (value || "").trim();
+  el.textContent = v || emptyHint || "";
+  el.classList.toggle("is-empty", !v);
+}
+
+function refreshCoverLive() {
+  const root = document.getElementById("cover-live");
+  if (!root || !state.draft) return;
+  const h = state.draft.hero || {};
+  setLiveText(
+    "cl-kicker",
+    [(h.datesLabel || "").trim(), (h.badge || "").trim()].filter(Boolean).join(" · "),
+    "（徽章/日期留空则不显示）",
+  );
+  const l1 = ((h.titleLines || [])[0] || "").trim() || (h.name ? h.name + "，" : "TA，");
+  const l2 = ((h.titleLines || [])[1] || "").trim() || "生日快乐";
+  setLiveText("cl-title", l1 + "\n" + l2, "（主标题）");
+  const subEl = document.getElementById("cl-sub");
+  if (subEl) {
+    const sub = (h.subLines || []).filter((s) => s.trim());
+    subEl.innerHTML = sub.length ? sub.map((s) => esc(s)).join("<br />") : '<i class="b-muted">（封面副标题留空则不显示）</i>';
+  }
+  setLiveText("cl-couple", h.coupleName, "（落款留空则不显示）");
+  setLiveText("cl-note", h.coupleNote, "");
+}
+
+function refreshStopLives() {
+  const stops = (state.draft && state.draft.stops) || [];
+  stops.forEach((s, i) => {
+    const sEl = document.getElementById("story-live-" + i);
+    if (sEl) {
+      const paras = (s.story || []).filter((t) => t.trim());
+      sEl.innerHTML = paras.length
+        ? paras.map((t) => `<p>${esc(t)}</p>`).join("")
+        : '<i class="b-muted">（还没写正文）</i>';
+    }
+    setLiveText("mood-live-" + i, s.mood, "（还没写心情）");
+  });
 }
 
 function renderNav() {
@@ -340,6 +392,18 @@ function renderBasic(body) {
     </div>
     <div class="b-field"><label>作品标题（浏览器标签 / 微信分享标题）</label>
       <input class="b-input" data-p="page.title" value="${esc(d.page.title || "")}" placeholder="留空自动生成" /></div>
+  </section>
+
+  <section class="b-card">
+    <h3>封面实时预览 <span class="b-muted" style="font-weight:400">（随输入更新，不用切去预览页）</span></h3>
+    <div class="cover-live" id="cover-live" aria-hidden="true">
+      <p class="cl-kicker" id="cl-kicker"></p>
+      <p class="cl-title" id="cl-title"></p>
+      <p class="cl-sub" id="cl-sub"></p>
+      <p class="cl-couple" id="cl-couple"></p>
+      <p class="cl-note" id="cl-note"></p>
+    </div>
+    <p class="b-hint">这大致就是 TA 打开成品第一眼看到的封面排版。</p>
   </section>
 
   <section class="b-card">
@@ -600,24 +664,32 @@ function renderStops(body) {
         </div>
         <div class="b-stop-body">
           <div class="b-field"><label>站点名 *</label>
-            <input class="b-input" data-p="stops.${i}.title" value="${esc(stop.title || "")}" placeholder="如：印记工坊" /></div>
+            <input class="b-input" data-p="stops.${i}.title" value="${esc(stop.title || "")}" placeholder="如：印记工坊" />
+            <p class="b-hint">→ 出现在：地图上的站点标记 + 章节页大标题</p></div>
           <div class="b-row">
             <div class="b-field"><label>第几天</label>
               <select class="b-select" data-p="stops.${i}.day" data-num="1">${dayOptions}</select></div>
-            <div class="b-field"><label>一句话简介（地图面板显示）</label>
-              <input class="b-input" data-p="stops.${i}.short" value="${esc(stop.short || "")}" placeholder="如：下午，去做一件能一直戴着的纪念。" /></div>
+            <div class="b-field"><label>一句话简介</label>
+              <input class="b-input" data-p="stops.${i}.short" value="${esc(stop.short || "")}" placeholder="如：下午，去做一件能一直戴着的纪念。" />
+              <p class="b-hint">→ 出现在：地图下方面板（TA 点进来前先看到这句）</p></div>
           </div>
           <div class="b-field"><label>这一站在哪（可选小标签）</label>
-            <input class="b-input" data-p="stops.${i}.place" value="${esc(stop.place || "")}" placeholder="如：这一站是：手作工坊里" /></div>
+            <input class="b-input" data-p="stops.${i}.place" value="${esc(stop.place || "")}" placeholder="如：这一站是：手作工坊里" />
+            <p class="b-hint">→ 出现在：章节页的「这一站是…」小标签</p></div>
           <div class="b-field"><label>正文故事（每行一段，TA 会逐段阅读）</label>
-            <textarea class="b-textarea" style="min-height:110px" data-p="stops.${i}.story" data-lines="1" placeholder="每行一段……">${esc((stop.story || []).join("\n"))}</textarea></div>
+            <textarea class="b-textarea" style="min-height:110px" data-p="stops.${i}.story" data-lines="1" placeholder="每行一段……">${esc((stop.story || []).join("\n"))}</textarea>
+            <p class="b-hint">→ 出现在：章节正文，成品效果见下方（随输入更新）：</p>
+            <div class="b-story-live" id="story-live-${i}" aria-hidden="true"></div></div>
           <div class="b-field"><label>这一站的心情（一句话）</label>
-            <input class="b-input" data-p="stops.${i}.mood" value="${esc(stop.mood || "")}" placeholder="如：有些约定不必说出口，戴在手上就够了。" /></div>
+            <input class="b-input" data-p="stops.${i}.mood" value="${esc(stop.mood || "")}" placeholder="如：有些约定不必说出口，戴在手上就够了。" />
+            <p class="b-hint">→ 出现在：章节页的「心情」卡片。成品效果：<em class="b-mood-live" id="mood-live-${i}"></em></p></div>
           <div class="b-row">
             <div class="b-field"><label>小任务（可留空）</label>
-              <input class="b-input" data-p="stops.${i}.task" value="${esc(stop.task || "")}" placeholder="如：把两件作品放在一起合影" /></div>
+              <input class="b-input" data-p="stops.${i}.task" value="${esc(stop.task || "")}" placeholder="如：把两件作品放在一起合影" />
+              <p class="b-hint">→ 出现在：章节页「小任务」卡片（📷）</p></div>
             <div class="b-field"><label>卡片提示（填了就有骰子小游戏）</label>
-              <input class="b-input" data-p="stops.${i}.hint" value="${esc(stop.hint || "")}" placeholder="如：第 1 张卡：手作卡" /></div>
+              <input class="b-input" data-p="stops.${i}.hint" value="${esc(stop.hint || "")}" placeholder="如：第 1 张卡：手作卡" />
+              <p class="b-hint">→ 出现在：章节页卡片提示；不填则不显示骰子</p></div>
           </div>
           <div class="b-field"><label>站图标（地图小图标）</label>
             <div class="b-pick">
@@ -1212,6 +1284,7 @@ function onInput(e) {
       }
       removeIconThumb(idx);
       scheduleSave();
+      refreshLive();
     }
     return;
   }
@@ -1234,6 +1307,7 @@ function onInput(e) {
     }
   }
   scheduleSave();
+  refreshLive();
 }
 
 function onChange(e) {
