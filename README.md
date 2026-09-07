@@ -10,11 +10,15 @@
 
 ## 🎨 效果预览
 
-同一份旅程的三种风格主题（标记可换成任意 emoji 或你上传的贴纸）：
+同一份旅程的五种风格主题，选风格会同步配套各自的地图背景（标记可换成任意 emoji 或你上传的贴纸）：
 
 | 海边暖沙 | 森林 | 星光夜 |
 | --- | --- | --- |
 | ![seaside](docs/screens/theme-seaside.png) | ![forest](docs/screens/theme-forest.png) | ![starry](docs/screens/theme-starry.png) |
+
+| 新婚燕尔（地点式地图背景） | 圣诞颂歌（地点式地图背景） |
+| --- | --- |
+| ![newlywed](docs/screens/theme-newlywed.png) | ![christmas](docs/screens/theme-christmas.png) |
 
 ## ✨ 3 分钟上手
 
