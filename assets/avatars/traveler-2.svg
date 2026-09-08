@@ -1,27 +1,42 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" aria-label="traveler two">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" aria-label="little princess">
   <defs>
-    <linearGradient id="bg2" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#eff6fb"/>
-      <stop offset="1" stop-color="#d7e9f2"/>
+    <linearGradient id="pg2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#fdeef3"/>
     </linearGradient>
   </defs>
-  <circle cx="200" cy="200" r="196" fill="url(#bg2)"/>
-  <!-- sea-blue shirt -->
-  <rect x="132" y="252" width="136" height="128" rx="46" fill="#4f9aa0"/>
-  <path d="M200 258 L176 300 L200 288 L224 300 Z" fill="#f2fbfc"/>
+  <circle cx="200" cy="200" r="196" fill="url(#pg2)"/>
+  <!-- dreamy dots -->
+  <circle cx="88" cy="120" r="7" fill="#f6c9d8" opacity="0.7"/>
+  <circle cx="322" cy="96" r="5" fill="#f6c9d8" opacity="0.7"/>
+  <path d="M330 170 l0 0 m-6 -6 a6 6 0 1 1 12 0 a6 6 0 1 1 -12 0" fill="#ffe08a" opacity="0.9"/>
+  <!-- loli dress: cream bodice + pink ruffle skirt -->
+  <path d="M150 268 q50 -18 100 0 l26 84 q-76 26 -152 0 z" fill="#fdf3f5"/>
+  <path d="M176 334 q24 12 48 0 q-24 14 -48 0 z" fill="#f6cddc"/>
+  <path d="M150 268 q50 -18 100 0 l20 66 q-70 22 -140 0 z" fill="#fff8f4" stroke="#f3b7c8" stroke-width="4"/>
+  <!-- waist bow -->
+  <path d="M188 268 l-20 -12 v24 z M212 268 l20 -12 v24 z" fill="#e58b9e"/>
+  <circle cx="200" cy="268" r="7" fill="#d97b92"/>
+  <!-- magic wand -->
+  <line x1="268" y1="232" x2="322" y2="148" stroke="#e8c46a" stroke-width="5" stroke-linecap="round"/>
+  <path d="M322 128 c-6 -7 -16 -2 -16 5 c0 5 16 11 16 11 s16 -6 16 -11 c0 -7 -10 -12 -16 -5 z" fill="#f48fb1"/>
+  <!-- pink twintails -->
+  <ellipse cx="146" cy="196" rx="24" ry="52" fill="#f4a9c4" transform="rotate(14 146 196)"/>
+  <ellipse cx="254" cy="196" rx="24" ry="52" fill="#f4a9c4" transform="rotate(-14 254 196)"/>
+  <ellipse cx="146" cy="148" rx="12" ry="10" fill="#e58b9e"/>
+  <ellipse cx="254" cy="148" rx="12" ry="10" fill="#e58b9e"/>
+  <!-- golden heart crown -->
+  <path d="M172 122 q0 -16 28 -16 q28 0 28 16 q0 18 -28 34 q-28 -16 -28 -34 z" fill="#e9c46a"/>
+  <path d="M182 122 c-4 -5 -11 -1 -11 3 c0 4 11 8 11 8 s11 -4 11 -8 c0 -4 -7 -8 -11 -3 z" fill="#e9c46a" transform="translate(18 -2)"/>
   <!-- ears -->
-  <circle cx="134" cy="186" r="11" fill="#ffe0c9"/>
-  <circle cx="266" cy="186" r="11" fill="#ffe0c9"/>
+  <circle cx="132" cy="186" r="11" fill="#ffdcc4"/>
+  <circle cx="268" cy="186" r="11" fill="#ffdcc4"/>
   <!-- head -->
-  <circle cx="200" cy="176" r="66" fill="#ffe0c9"/>
-  <!-- hair: navy bun + fringe arc -->
-  <circle cx="200" cy="92" r="26" fill="#3a4a5a"/>
-  <path d="M138 178 a64 64 0 0 1 124 -4" fill="none" stroke="#3a4a5a" stroke-width="30" stroke-linecap="round"/>
-  <path d="M138 180 q14 -16 34 -12 q28 -8 40 4 q14 -4 26 8" fill="#3a4a5a"/>
+  <circle cx="200" cy="176" r="64" fill="#ffdcc4"/>
   <!-- face -->
-  <circle cx="180" cy="190" r="5.5" fill="#4a3a2e"/>
-  <circle cx="220" cy="190" r="5.5" fill="#4a3a2e"/>
-  <path d="M186 208 q14 13 28 0" fill="none" stroke="#4a3a2e" stroke-width="4" stroke-linecap="round"/>
-  <circle cx="169" cy="205" r="9" fill="#f2a88c" opacity="0.6"/>
-  <circle cx="231" cy="205" r="9" fill="#f2a88c" opacity="0.6"/>
+  <circle cx="182" cy="190" r="5.5" fill="#5b4636"/>
+  <circle cx="218" cy="190" r="5.5" fill="#5b4636"/>
+  <path d="M187 208 q13 12 26 0" fill="none" stroke="#5b4636" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="171" cy="205" r="9" fill="#f6a68c" opacity="0.55"/>
+  <circle cx="229" cy="205" r="9" fill="#f6a68c" opacity="0.55"/>
 </svg>
