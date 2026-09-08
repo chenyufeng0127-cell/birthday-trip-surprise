@@ -183,7 +183,11 @@ const THEMES = [
 
 /* 成对小人套装：点一套 → 同时填两位小人（封面落款 + 地图上沿路线走的主角） */
 const AVATAR_SETS = [
-  { id: "prince-princess", label: "小王子与小公主", keys: ["assets/avatars/prince.webp", "assets/avatars/princess.webp"] },
+  { id: "prince-princess", label: "原版 · 小王子与小公主", keys: ["assets/avatars/prince.webp", "assets/avatars/princess.webp"] },
+  { id: "forest", label: "森林 · 王子与公主", keys: ["assets/avatars/forest-boy.webp", "assets/avatars/forest-girl.webp"] },
+  { id: "starry", label: "星光夜 · 王子与公主", keys: ["assets/avatars/starry-boy.webp", "assets/avatars/starry-girl.webp"] },
+  { id: "newlywed", label: "新婚燕尔 · 王子与公主", keys: ["assets/avatars/wedding-boy.webp", "assets/avatars/wedding-girl.webp"] },
+  { id: "christmas", label: "圣诞颂歌 · 王子与公主", keys: ["assets/avatars/christmas-boy.webp", "assets/avatars/christmas-girl.webp"] },
 ];
 
 /* 套装卡片行：当前两位小人正好等于某套时高亮 */
