@@ -183,7 +183,7 @@ const THEMES = [
 
 /* 成对小人套装：点一套 → 同时填两位小人（封面落款 + 地图上沿路线走的主角） */
 const AVATAR_SETS = [
-  { id: "sunset-duo", label: "甜梦小王子与小公主", keys: ["assets/avatars/traveler-1.svg", "assets/avatars/traveler-2.svg"] },
+  { id: "prince-princess", label: "小王子与小公主", keys: ["assets/avatars/prince.webp", "assets/avatars/princess.webp"] },
 ];
 
 /* 套装卡片行：当前两位小人正好等于某套时高亮 */
