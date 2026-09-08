@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" aria-label="traveler one">
+  <defs>
+    <linearGradient id="bg1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff7ee"/>
+      <stop offset="1" stop-color="#f7e0c8"/>
+    </linearGradient>
+  </defs>
+  <circle cx="200" cy="200" r="196" fill="url(#bg1)"/>
+  <!-- warm scarf/shirt -->
+  <rect x="132" y="252" width="136" height="128" rx="46" fill="#e58b9e"/>
+  <path d="M200 258 L176 300 L200 288 L224 300 Z" fill="#fdf4ee"/>
+  <!-- ears -->
+  <circle cx="134" cy="186" r="11" fill="#ffdcc4"/>
+  <circle cx="266" cy="186" r="11" fill="#ffdcc4"/>
+  <!-- head -->
+  <circle cx="200" cy="176" r="66" fill="#ffdcc4"/>
+  <!-- hair: warm brown cap arc + side flicks -->
+  <path d="M134 176 a66 66 0 0 1 132 0" fill="none" stroke="#b9815f" stroke-width="34" stroke-linecap="round"/>
+  <circle cx="150" cy="180" r="9" fill="#b9815f"/>
+  <circle cx="250" cy="180" r="9" fill="#b9815f"/>
+  <circle cx="200" cy="98" r="9" fill="#b9815f"/>
+  <!-- face -->
+  <circle cx="180" cy="184" r="5.5" fill="#5b4636"/>
+  <circle cx="220" cy="184" r="5.5" fill="#5b4636"/>
+  <path d="M186 202 q14 13 28 0" fill="none" stroke="#5b4636" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="169" cy="199" r="9" fill="#f6a68c" opacity="0.6"/>
+  <circle cx="231" cy="199" r="9" fill="#f6a68c" opacity="0.6"/>
+</svg>

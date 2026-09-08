@@ -181,6 +181,28 @@ const THEMES = [
   { id: "christmas", label: "圣诞颂歌", note: "雪夜小屋与暖窗，松针绿与红金灯", swatch: ["#dde8e3", "#a23b48", "#5c8f7f"], mapBg: "m:assets/map/map-christmas.jpg" },
 ];
 
+/* 成对小人套装：点一套 → 同时填两位小人（封面落款 + 地图上沿路线走的主角） */
+const AVATAR_SETS = [
+  { id: "sunset-duo", label: "暖沙旅伴", keys: ["assets/avatars/traveler-1.svg", "assets/avatars/traveler-2.svg"] },
+];
+
+/* 套装卡片行：当前两位小人正好等于某套时高亮 */
+function avatarSetsRow(avatars) {
+  const cur = Array.isArray(avatars) ? avatars : [];
+  return `<div class="b-avatar-row">
+    ${AVATAR_SETS.map((set) => {
+      const on =
+        cur.length >= 2 &&
+        cur[0] === "m:" + set.keys[0] &&
+        cur[1] === "m:" + set.keys[1];
+      const imgs = set.keys
+        .map((k) => (SRC.media[k] ? `<img src="${SRC.media[k]}" alt="" />` : ""))
+        .join("");
+      return `<button type="button" class="b-avatar-card${on ? " is-on" : ""}" data-act="avatar-set" data-set="${set.id}" title="${esc(set.label)}">${imgs}<span>${esc(set.label)}</span></button>`;
+    }).join("")}
+  </div>`;
+}
+
 function blankDraft() {
   return {
     uid: uid(),
@@ -543,10 +565,13 @@ function renderBasic(body) {
 
   <section class="b-card">
     <h2>落款头像（可选）</h2>
-    ${imagePicker("hero.avatars.0", (h.avatars || [])[0] || "", { media: [], pickLabel: "加第一张头像" })}
+    <p class="b-hint">这对小人是封面上的落款，也是地图上沿路线一站一站走的主角。成对套装一键填好两位：</p>
+    ${avatarSetsRow(h.avatars)}
+    <p class="b-hint" style="margin-top:4px">也可以分别选/传图，或只放一位：</p>
+    ${imagePicker("hero.avatars.0", (h.avatars || [])[0] || "", { media: mediaKeysOf("assets/avatars"), pickLabel: "加第一张头像" })}
     <div style="height:8px"></div>
-    ${imagePicker("hero.avatars.1", (h.avatars || [])[1] || "", { media: [], pickLabel: "加第二张头像" })}
-    <p class="b-hint">留空也可以：封面不显示头像，地图上的小人会自动隐藏。</p>
+    ${imagePicker("hero.avatars.1", (h.avatars || [])[1] || "", { media: mediaKeysOf("assets/avatars"), pickLabel: "加第二张头像" })}
+    <p class="b-hint">留空也可以：封面不显示头像，地图上的小人会自动隐藏。头像会跟着路线移动，建议选浅色底小图。</p>
   </section>
 
   <section class="b-card">
@@ -2093,6 +2118,25 @@ async function onClick(e) {
       "风格已切换为「" + (picked ? picked.label : "") +
         "」——已配套" + (picked && picked.mapBg && isDefaultBg ? "地图背景，" : "") +
         "到「预览与导出」查看效果",
+    );
+    return;
+  }
+
+  if (act === "avatar-set") {
+    const set = AVATAR_SETS.find((s) => s.id === btn.dataset.set);
+    if (!set) return;
+    const prev = (state.draft.hero && state.draft.hero.avatars) || [];
+    state.draft.hero = state.draft.hero || {};
+    state.draft.hero.avatars = set.keys.map((k) => "m:" + k);
+    document
+      .querySelectorAll("[data-act='avatar-set']")
+      .forEach((c) => c.classList.toggle("is-on", c === btn));
+    scheduleSave();
+    rerenderCurrent(true);
+    toast(
+      (prev.length ? "已换成「" : "已放上「") +
+        set.label +
+        "」这对小人——封面落款与地图上沿路线走的都是他们",
     );
     return;
   }

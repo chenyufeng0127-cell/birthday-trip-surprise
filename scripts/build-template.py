@@ -24,6 +24,7 @@ MEDIA_DIRS = [
     "assets/ai",
     "assets/icons",
     "assets/map",
+    "assets/avatars",
     "assets/photos/sample",
 ]
 MEDIA_EXTS = {".webp", ".png", ".jpg", ".jpeg", ".svg", ".gif"}

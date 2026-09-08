@@ -967,3 +967,53 @@ textarea.code {
 .b-sticker-lg img {
   border-radius: 12px;
 }
+
+/* ---------- 成对小人套装 ---------- */
+.b-avatar-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 10px;
+}
+
+.b-avatar-card {
+  border: 2px solid var(--bk-line);
+  background: #fff;
+  border-radius: 14px;
+  padding: 7px 12px 7px 7px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.15s ease;
+}
+
+.b-avatar-card img {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--bk-line);
+}
+
+.b-avatar-card img + img {
+  margin-left: -16px;
+  box-shadow: -2px 0 0 #fff;
+}
+
+.b-avatar-card span {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--bk-ink);
+  white-space: nowrap;
+}
+
+.b-avatar-card:hover {
+  border-color: var(--bk-accent);
+}
+
+.b-avatar-card.is-on {
+  border-color: var(--bk-accent);
+  background: rgba(201, 106, 130, 0.06);
+}

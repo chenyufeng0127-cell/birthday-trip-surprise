@@ -38,7 +38,7 @@ window.TRIP_CONFIG = {
     coupleName: "我们的旅行", // 封面底部的落款
     coupleNote: "每一天，都值得被记住。", // 落款旁的小字
     coverImage: "assets/ai/ai-bonfire.webp", // 封面大图（推荐深色夜景；留空 "" 用纯色封面）
-    avatars: [], // 可选：主角头像图（如 ["assets/photos/me.png"]）。
+    avatars: ["assets/avatars/traveler-1.svg", "assets/avatars/traveler-2.svg"], // 可选：两位小人（封面落款 + 地图上沿路线走的主角）
     // 留空 [] 则封面上不显示头像；地图上的小人也会隐藏（不影响体验）
   },
 
