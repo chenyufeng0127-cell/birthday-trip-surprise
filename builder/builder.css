@@ -825,7 +825,8 @@ textarea.code {
 
 .b-calib-pt {
   position: absolute;
-  transform: translate(-50%, -100%);
+  /* 图钉：三角高 9px，让尖角尖端精确落在坐标点上 */
+  transform: translate(-50%, calc(-100% - 9px));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -844,7 +845,7 @@ textarea.code {
   color: #fff;
   font-size: 12px;
   font-weight: 700;
-  line-height: 26px;
+  line-height: 1;
   z-index: 1;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
 }
@@ -860,8 +861,12 @@ textarea.code {
   transform: translateX(-50%);
 }
 
+/* 站名标签脱离布局，锚点只由标记本体决定 */
 .b-calib-pt i {
-  margin-top: 6px;
+  position: absolute;
+  top: calc(100% + 13px);
+  left: 50%;
+  transform: translateX(-50%);
   padding: 1px 6px;
   border-radius: 999px;
   background: rgba(45, 38, 34, 0.6);
@@ -869,6 +874,26 @@ textarea.code {
   font-size: 10px;
   font-style: normal;
   white-space: nowrap;
+}
+
+/* 卡片式：圆角方形、无尖角，卡片中心 = 坐标点 */
+.b-calib-pt.is-card {
+  transform: translate(-50%, -50%);
+}
+
+.b-calib-pt.is-card b {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  font-size: 13px;
+}
+
+.b-calib-pt.is-card b::after {
+  display: none;
+}
+
+.b-calib-pt.is-card i {
+  top: calc(100% + 6px);
 }
 
 .b-calib-pt:active {

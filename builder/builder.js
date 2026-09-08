@@ -630,16 +630,22 @@ function calibPanelHtml() {
     d.map && Array.isArray(d.map.positions) && d.map.positions.length === stops.length
       ? d.map.positions
       : calibAuto(stops.length);
+  // 校准点跟随「标记样式」：pin 显示圆形图钉（尖角=坐标），card 显示圆角卡片（中心=坐标）
+  const isCard = (d.map && d.map.markerStyle) === "card";
   const pts = positions
     .map(
       (p, i) =>
-        `<span class="b-calib-pt" data-calib-i="${i}" style="left:${p.x}%;top:${p.y}%"><b>${i + 1}</b><i>${esc((stops[i].title || "").slice(0, 6))}</i></span>`,
+        `<span class="b-calib-pt ${isCard ? "is-card" : "is-pin"}" data-calib-i="${i}" style="left:${p.x}%;top:${p.y}%"><b>${i + 1}</b><i>${esc((stops[i].title || "").slice(0, 6))}</i></span>`,
     )
     .join("");
   return `<div class="b-calib-stage" style="background-image:url('${esc(bg)}')">${pts}</div>
   <div class="b-flex" style="margin-top:8px">
     <button type="button" class="b-btn b-btn-sm b-btn-ghost" data-act="calib-auto">↺ 重置为自动</button>
-    <span class="b-hint" style="margin:0">拖动数字点，对准图上的地标（尖角即标记指向）</span>
+    <span class="b-hint" style="margin:0">${
+      isCard
+        ? "拖动卡片，让卡片中心对准地标（卡片中心 = 站点坐标）"
+        : "拖动图钉，让尖角对准地标（图钉尖角 = 站点坐标）"
+    }</span>
     <span class="b-spacer"></span>
     <button type="button" class="b-btn b-btn-sm b-btn-primary" data-act="calib-close">完成 ✓</button>
   </div>`;
