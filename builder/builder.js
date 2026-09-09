@@ -492,7 +492,7 @@ function renderBasic(body) {
   <section class="b-card">
     <h2>谁是主角？</h2>
     <div class="b-field"><label>TA 的名字 / 昵称 *</label>
-      <input class="b-input" data-p="hero.name" value="${esc(h.name)}" placeholder="如：小星" /></div>
+      <input class="b-input" data-p="hero.name" value="${esc(h.name)}" placeholder="如：欣" /></div>
     <div class="b-row">
       <div class="b-field"><label>封面英文小徽章</label>
         <input class="b-input" data-p="hero.badge" value="${esc(h.badge)}" placeholder="BIRTHDAY TRIP" /></div>
@@ -501,7 +501,7 @@ function renderBasic(body) {
     </div>
     <div class="b-row">
       <div class="b-field"><label>主标题·第一行</label>
-        <input class="b-input" data-p="hero.titleLines.0" value="${esc((h.titleLines || [])[0] || "")}" placeholder="如：小星，" /></div>
+        <input class="b-input" data-p="hero.titleLines.0" value="${esc((h.titleLines || [])[0] || "")}" placeholder="如：欣，" /></div>
       <div class="b-field"><label>主标题·第二行</label>
         <input class="b-input" data-p="hero.titleLines.1" value="${esc((h.titleLines || [])[1] || "")}" placeholder="生日快乐" /></div>
     </div>
@@ -510,7 +510,7 @@ function renderBasic(body) {
       <p class="b-hint">多写几句也没关系。</p></div>
     <div class="b-row">
       <div class="b-field"><label>封面落款</label>
-        <input class="b-input" data-p="hero.coupleName" value="${esc(h.coupleName)}" placeholder="如：我 & 小星" /></div>
+        <input class="b-input" data-p="hero.coupleName" value="${esc(h.coupleName)}" placeholder="如：我 & 欣" /></div>
       <div class="b-field"><label>落款旁小字</label>
         <input class="b-input" data-p="hero.coupleNote" value="${esc(h.coupleNote)}" /></div>
     </div>
@@ -1125,7 +1125,7 @@ const AI_SYSTEM_PROMPT = `你是「生日旅行惊喜网页」的文案与行程
     "name": "寿星昵称",
     "badge": "英文小徽章，如 BIRTHDAY TRIP",
     "datesLabel": "日期，如 6.28 → 6.30",
-    "coupleName": "落款，如 我 & 小星",
+    "coupleName": "落款，如 我 & 欣",
     "coupleNote": "落款旁的一句话"
   },
   "dayDates": { "1": "M.D", "2": "M.D" },
