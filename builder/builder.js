@@ -1159,7 +1159,7 @@ function renderAssist(body) {
     <br />🎨 图片素材灵感：按主题与用途生成可直接复制的出图提示词（无需 Key 也能用）；
     <br />📋 粘贴导入：完全不填 Key 的万能通道。</p>
     <div class="b-tabs">
-      <button class="is-on" data-act="ai-tab" data-tab="chat">💬 AI 对话</button>
+      <button class="is-on" data-act="ai-tab" data-tab="chat">💬 AI 对话（实验）</button>
       <button data-act="ai-tab" data-tab="inspiration">🎨 图片灵感</button>
       <button data-act="ai-tab" data-tab="paste">📋 粘贴导入</button>
     </div>
@@ -1213,7 +1213,8 @@ function renderChatPane(pane) {
   const savedKey = localStorage.getItem(LS_AI_KEY) || "";
   const savedBase = localStorage.getItem(LS_AI_BASE) || prov.base;
   const savedModel = localStorage.getItem(LS_AI_MODEL) || prov.model;
-  pane.innerHTML = `<div class="b-field"><label>选择模型（费用走你自己的账户；Ollama 本地则完全无需 Key）</label>
+  pane.innerHTML = `<p class="b-hint" style="margin:0 0 10px">⚠️ 实验性功能：浏览器直连 AI 接口可能被 CORS 拦截，也可能遇到模型/额度问题。若发送失败或一直转圈，请改用「📋 粘贴导入」——零 Key、更稳。</p>
+      <div class="b-field"><label>选择模型（费用走你自己的账户；Ollama 本地则完全无需 Key）</label>
       <select class="b-select" data-ai-provider>${aiProviderOptions(provId)}</select></div>
       <div class="b-field"><label>API Key</label>
         <div class="b-flex">
