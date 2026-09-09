@@ -88,6 +88,9 @@ birthday-trip-surprise/
 
 ## 📄 License
 
-[MIT](LICENSE)：欢迎个人使用、修改和分享。做出来之后欢迎[告诉我一声](https://github.com/chenyufeng0127-cell/birthday-trip-surprise/issues)——比起 star，我更想看到你的版本和踩到的坑；商业用途请先联系作者。
+**双许可**（全文见 [LICENSE](LICENSE)）：
+
+- **个人与非商业用途：免费。** 按 PolyForm Noncommercial License 1.0.0 使用、修改、分享——做出来欢迎[告诉我一声](https://github.com/chenyufeng0127-cell/birthday-trip-surprise/issues)，比起 star，我更想看到你的版本和踩到的坑。
+- **商业用途：需另行取得授权。** 企业内部使用、SaaS、付费产品、代客交付等场景，欢迎通过 Issues 或 GitHub [@chenyufeng0127-cell](https://github.com/chenyufeng0127-cell) 联系作者洽谈合作与授权。
 
 仓库内的示例插画/图标/占位图为本项目内置示例素材；你在向导中上传的素材归属各制作者本人。
