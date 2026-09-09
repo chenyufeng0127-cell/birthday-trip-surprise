@@ -88,4 +88,6 @@ birthday-trip-surprise/
 
 ## 📄 License
 
-[MIT](LICENSE)。仓库内的示例插画/图标/占位图为本项目内置示例素材；你在向导中上传的素材归属各制作者本人。
+[MIT](LICENSE)：欢迎个人使用、修改和分享。做出来之后欢迎[告诉我一声](https://github.com/chenyufeng0127-cell/birthday-trip-surprise/issues)——比起 star，我更想看到你的版本和踩到的坑；商业用途请先联系作者。
+
+仓库内的示例插画/图标/占位图为本项目内置示例素材；你在向导中上传的素材归属各制作者本人。
