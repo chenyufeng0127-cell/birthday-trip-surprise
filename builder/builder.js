@@ -550,6 +550,38 @@ function audioListHtml() {
     .join("")}</div>`;
 }
 
+function audioLinksHtml() {
+  const links = (state.draft && state.draft.music && state.draft.music.links) || [];
+  if (!links.length) return "";
+  return `<div class="b-audio-list">${links
+    .map(
+      (url, i) => `<div class="b-audio-item">
+      <span class="b-audio-name">🔗 ${esc(url)}</span>
+      <span class="b-audio-meta">外链（需联网）</span>
+      <button type="button" class="b-btn b-btn-sm b-btn-ghost" data-act="audio-link-del" data-i="${i}" title="移除">✕</button>
+    </div>`,
+    )
+    .join("")}</div>`;
+}
+
+/* 清掉某个音源在所有位置上的引用（删除音频 / 移除外链时用） */
+function clearMusicRef(ref) {
+  const d = state.draft;
+  if (!d) return;
+  if (d.music) {
+    Object.keys(d.music.pages || {}).forEach((k) => {
+      if (d.music.pages[k] === ref) d.music.pages[k] = "";
+    });
+    Object.keys(d.music.themes || {}).forEach((k) => {
+      if (d.music.themes[k] === ref) d.music.themes[k] = "";
+    });
+  }
+  (d.stops || []).forEach((s) => {
+    if (s.music === ref) delete s.music;
+    else if (s.music && typeof s.music === "object" && s.music.src === ref) delete s.music;
+  });
+}
+
 function audioSelectHtml(path, current) {
   const cur = current || "";
   const opts = ['<optgroup label="内置合成旋律（零体积）">'];
@@ -813,6 +845,11 @@ function renderBasic(body) {
       <span class="b-muted" style="font-size:12px">${musicSizeHint(d)}</span>
     </div>
     ${audioListHtml()}
+    <div class="b-flex" style="margin-top:8px">
+      <input class="b-input" style="flex:1;min-width:0" data-audio-link placeholder="也可以填外链音频地址 https://…/music.mp3" />
+      <button type="button" class="b-btn b-btn-sm" data-act="audio-link-add">🔗 添加外链</button>
+    </div>
+    ${audioLinksHtml()}
     <div class="b-row" style="margin-top:10px">
       ${["cover", "map", "memory", "finale"]
         .map(
@@ -1193,6 +1230,9 @@ function renderStops(body) {
               </span>
             </div>
             <p class="b-hint">图库可存多张，任点一张设为当前；右上 ✕ 删除单张。加入的图不会因点选其它图而消失；预设插画点选即用。当前图显示在本站顶部预览卡。</p></div>
+          <div class="b-field"><label>这一站的音乐</label>
+            ${audioSelectHtml("stops." + i + ".music", stop.music || "")}
+            <p class="b-hint">进入这一站时播放；留「跟随默认」就用页面上级设置（地图 / 封面那套）。</p></div>
           <div class="b-field"><label>这一站的照片（进照片墙和回忆册）</label>
             <div class="b-photos">
               ${pics}
@@ -2456,6 +2496,41 @@ async function onClick(e) {
   if (act === "audio-upload") {
     const input = document.querySelector("[data-audio-file]");
     if (input) input.click();
+    return;
+  }
+
+  if (act === "audio-link-add") {
+    const input = document.querySelector("[data-audio-link]");
+    const url = ((input && input.value) || "").trim();
+    if (!/^https?:\/\//i.test(url)) {
+      toast("请填写以 http(s):// 开头的音频地址（成品打开时需要联网）");
+      return;
+    }
+    state.draft.music = state.draft.music || {};
+    state.draft.music.links = state.draft.music.links || [];
+    if (state.draft.music.links.includes(url)) {
+      toast("这个地址已经在列表里了");
+      return;
+    }
+    state.draft.music.links.push(url);
+    if (input) input.value = "";
+    scheduleSave();
+    rerenderCurrent(true);
+    toast("已加入外链音乐，可在下面的下拉里选它");
+    return;
+  }
+
+  if (act === "audio-link-del") {
+    const i = Number(btn.dataset.i);
+    const links = (state.draft.music && state.draft.music.links) || [];
+    const url = links[i];
+    if (url) {
+      clearMusicRef(url);
+      links.splice(i, 1);
+      scheduleSave();
+      rerenderCurrent(true);
+      toast("已移除该外链，用到它的位置改回内置旋律了");
+    }
     return;
   }
 
