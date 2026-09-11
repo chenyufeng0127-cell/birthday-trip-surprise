@@ -532,6 +532,30 @@ function musicIsAudioRef(v) {
   return typeof v === "string" && /^(m:|u:|https?:|data:|blob:)/.test(v);
 }
 
+/* 去哪找免费音源：Pixabay（免费、可商用、免署名），按主题给了推荐搜索 */
+const FREE_MUSIC_LINKS = [
+  { label: "🎵 Pixabay 音乐库（总入口）", url: "https://pixabay.com/zh/music/" },
+  { label: "海边 · 卡农 Canon in D", url: "https://pixabay.com/zh/music/search/canon%20in%20d/" },
+  { label: "森林 · Ragtime Jazz", url: "https://pixabay.com/zh/music/search/ragtime%20jazz/" },
+  { label: "星光夜 · 月光 Clair de Lune", url: "https://pixabay.com/zh/music/search/%E6%9C%88%E5%85%89%20clair%20de%20lune/" },
+  { label: "新婚 · 婚礼进行曲", url: "https://pixabay.com/zh/music/search/%E5%A9%9A%E7%A4%BC%E8%BF%9B%E8%A1%8C%E6%9B%B2%20wedding%20march/" },
+  { label: "圣诞 · 平安夜", url: "https://pixabay.com/zh/music/search/%E5%B9%B3%E5%AE%89%E5%A4%9C%20silent%20night/" },
+];
+
+function freeMusicHtml() {
+  return `<details class="b-fold" style="margin-top:10px">
+    <summary>💡 想换别的音乐？去 Pixabay 下载免费音源</summary>
+    <p class="b-hint">Pixabay 的音乐免费、可商用、免署名。打开下面的链接 → 试听并下载 mp3 → 回到这里点「🎵 上传音乐」即可用。下载时留意曲目页面的许可说明。</p>
+    <div class="b-flex" style="flex-wrap:wrap;gap:6px">
+      ${FREE_MUSIC_LINKS.map(
+        (l) =>
+          `<a class="b-btn b-btn-sm b-btn-ghost" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">${esc(l.label)}</a>`,
+      ).join("")}
+    </div>
+    <p class="b-hint">小提示：填「外链」时要贴音频文件直链（以 .mp3 结尾），不是网页地址；<a href="https://pixabay.com/service/license-summary/" target="_blank" rel="noopener noreferrer">Pixabay 许可说明</a>。</p>
+  </details>`;
+}
+
 /* 与 app.js 的 MUSIC_THEMES 键保持一致（内置合成旋律，零体积） */
 const MUSIC_THEME_LABELS = {
   cover: "默认 · 海边轻音",
@@ -948,6 +972,7 @@ function renderBasic(body) {
     </div>
     ${audioListHtml()}
     ${builtinTracksHtml()}
+    ${freeMusicHtml()}
     <div class="b-flex" style="margin-top:8px">
       <input class="b-input" style="flex:1;min-width:0" data-audio-link placeholder="也可以填外链音频地址 https://…/music.mp3" />
       <button type="button" class="b-btn b-btn-sm" data-act="audio-link-add">🔗 添加外链</button>
