@@ -8,10 +8,10 @@
 
 | 文件 | 曲目 | 作曲 | 演绎者 | 来源 |
 | --- | --- | --- | --- | --- |
-| `theme-seaside.mp3` | 卡农 Canon in D | 帕赫贝尔（1680）· 公有领域 | clavier-music | [Pixabay 搜索页](https://pixabay.com/zh/music/search/canon%20in%20d/) |
-| `theme-forest.mp3` | Ragtime Jazz Study Session | — | Alex Morgan | [Pixabay 搜索页](https://pixabay.com/zh/music/search/ragtime%20jazz/) |
-| `theme-starry.mp3` | 月光 Clair de Lune | 德彪西（1905）· 公有领域 | juliush | [Pixabay 搜索页](https://pixabay.com/zh/music/search/%E6%9C%88%E5%85%89%20clair%20de%20lune/) |
-| `theme-newlywed.mp3` | 婚礼进行曲 Wedding March（爵士改编） | 门德尔松（1842）· 公有领域 | music_for_videos | [Pixabay 搜索页](https://pixabay.com/zh/music/search/%E5%A9%9A%E7%A4%BC%E8%BF%9B%E8%A1%8C%E6%9B%B2%20wedding%20march/) |
+| `theme-seaside.mp3` | 卡农 Canon in D | 帕赫贝尔（1680）· 公有领域 | clavier-music | [曲目页](https://pixabay.com/zh/music/modern-classical-pachelbelx27s-canon-canon-in-d-307319/) |
+| `theme-forest.mp3` | Ragtime Jazz Study Session | — | Alex Morgan | [曲目页](https://pixabay.com/zh/music/modern-jazz-ragtime-jazz-study-session-567534/) |
+| `theme-starry.mp3` | 月光 Clair de Lune | 德彪西（1905）· 公有领域 | juliush | [曲目页](https://pixabay.com/zh/music/solo-piano-clair-de-lune-debussy-soft-piano-411227/) |
+| `theme-newlywed.mp3` | 婚礼进行曲 Wedding March（爵士改编） | 门德尔松（1842）· 公有领域 | music_for_videos | [曲目页](https://pixabay.com/zh/music/traditional-jazz-wedding-march-jazz-164959/) |
 | `theme-christmas.mp3` | 平安夜 Silent Night（Lo-Fi 改编） | 传统（1818）· 公有领域 | acoustic-group / tramp963 | [曲目页](https://pixabay.com/zh/music/acoustic-group-silent-night-lights-lo-fi-music-270153/) |
 | `birthday-theme.mp3` | Birthday 主题曲（站点主题曲） | — | 由项目作者提供 | 项目作者提供 |
 

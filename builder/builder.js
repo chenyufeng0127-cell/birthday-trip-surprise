@@ -517,14 +517,14 @@ const THEME_BGM = {
 /* 生日主题曲：整站的默认背景音乐（也可换成任意其它音源） */
 const BIRTHDAY_THEME_SONG = "m:assets/music/birthday-theme.mp3";
 
-/* 内置曲库（向导里可逐个试听）：theme 表示它配套哪套风格 */
+/* 内置曲库（向导里可逐个试听）：theme 表示它配套哪套风格，source 是 Pixabay 曲目页 */
 const BUILTIN_TRACKS = [
-  { id: "birthday", ref: BIRTHDAY_THEME_SONG, label: "Birthday 主题曲", note: "生日向导的主题曲 · 推荐整站使用", seconds: 81, theme: null },
-  { id: "seaside", ref: THEME_BGM.seaside, label: "海边暖沙 · 卡农 Canon in D", note: "帕赫贝尔 · 轻快优雅", seconds: 75, theme: "seaside" },
-  { id: "forest", ref: THEME_BGM.forest, label: "森林 · 轻快爵士 Ragtime", note: "Alex Morgan · 散步般的节奏", seconds: 75, theme: "forest" },
-  { id: "starry", ref: THEME_BGM.starry, label: "星光夜 · 月光 Clair de Lune", note: "德彪西 · 夜色钢琴", seconds: 75, theme: "starry" },
-  { id: "newlywed", ref: THEME_BGM.newlywed, label: "新婚燕尔 · 婚礼进行曲", note: "门德尔松曲 · 爵士改编", seconds: 33, theme: "newlywed" },
-  { id: "christmas", ref: THEME_BGM.christmas, label: "圣诞颂歌 · 平安夜 Silent Night", note: "传统圣诞曲 · Lo-Fi 改编", seconds: 75, theme: "christmas" },
+  { id: "birthday", ref: BIRTHDAY_THEME_SONG, label: "Birthday 主题曲", note: "生日向导的主题曲 · 推荐整站使用", seconds: 81, theme: null, source: "" },
+  { id: "seaside", ref: THEME_BGM.seaside, label: "海边暖沙 · 卡农 Canon in D", note: "帕赫贝尔 · 轻快优雅", seconds: 75, theme: "seaside", source: "https://pixabay.com/zh/music/modern-classical-pachelbelx27s-canon-canon-in-d-307319/" },
+  { id: "forest", ref: THEME_BGM.forest, label: "森林 · 轻快爵士 Ragtime", note: "Alex Morgan · 散步般的节奏", seconds: 75, theme: "forest", source: "https://pixabay.com/zh/music/modern-jazz-ragtime-jazz-study-session-567534/" },
+  { id: "starry", ref: THEME_BGM.starry, label: "星光夜 · 月光 Clair de Lune", note: "德彪西 · 夜色钢琴", seconds: 75, theme: "starry", source: "https://pixabay.com/zh/music/solo-piano-clair-de-lune-debussy-soft-piano-411227/" },
+  { id: "newlywed", ref: THEME_BGM.newlywed, label: "新婚燕尔 · 婚礼进行曲", note: "门德尔松曲 · 爵士改编", seconds: 33, theme: "newlywed", source: "https://pixabay.com/zh/music/traditional-jazz-wedding-march-jazz-164959/" },
+  { id: "christmas", ref: THEME_BGM.christmas, label: "圣诞颂歌 · 平安夜 Silent Night", note: "传统圣诞曲 · Lo-Fi 改编", seconds: 75, theme: "christmas", source: "https://pixabay.com/zh/music/acoustic-group-silent-night-lights-lo-fi-music-270153/" },
 ];
 
 /* 判断一个值是否为「音频音源引用」（而非内置旋律主题名） */
@@ -714,6 +714,7 @@ function builtinTracksHtml() {
         (t) => `<div class="b-audio-item">
         <span class="b-audio-name">${esc(t.label)}${t.id === "birthday" ? " ⭐" : ""}</span>
         <span class="b-audio-meta">${esc(t.note)} · ${audioDurationLabel(t.seconds)}</span>
+        ${t.source ? `<a class="b-btn b-btn-sm b-btn-ghost" href="${esc(t.source)}" target="_blank" rel="noopener noreferrer" title="打开 Pixabay 曲目页">来源 ↗</a>` : ""}
         <button type="button" class="b-btn b-btn-sm b-btn-ghost" data-act="bgm-preview" data-ref="${esc(t.ref)}">▶ 试听</button>
         <button type="button" class="b-btn b-btn-sm" data-act="bgm-apply-all" data-ref="${esc(t.ref)}">整站使用</button>
       </div>`,
