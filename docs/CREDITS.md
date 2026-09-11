@@ -4,7 +4,7 @@
 
 ## 一、内置背景音乐（`assets/music/`）
 
-全部五首主题曲均来自 [Pixabay Music](https://pixabay.com/zh/music/)（Pixabay Content License：免费、可商用、免署名），来源搜索页如下：
+全部五首主题曲均来自 [Pixabay Music](https://pixabay.com/zh/music/)（Pixabay Content License：免费、可商用、免署名）。下表「来源」给出可点开的曲目页（没有精确到曲目页的，先用搜索页代替）：
 
 | 文件 | 曲目 | 作曲 | 演绎者 | 来源 |
 | --- | --- | --- | --- | --- |
@@ -12,7 +12,7 @@
 | `theme-forest.mp3` | Ragtime Jazz Study Session | — | Alex Morgan | [Pixabay 搜索页](https://pixabay.com/zh/music/search/ragtime%20jazz/) |
 | `theme-starry.mp3` | 月光 Clair de Lune | 德彪西（1905）· 公有领域 | juliush | [Pixabay 搜索页](https://pixabay.com/zh/music/search/%E6%9C%88%E5%85%89%20clair%20de%20lune/) |
 | `theme-newlywed.mp3` | 婚礼进行曲 Wedding March（爵士改编） | 门德尔松（1842）· 公有领域 | music_for_videos | [Pixabay 搜索页](https://pixabay.com/zh/music/search/%E5%A9%9A%E7%A4%BC%E8%BF%9B%E8%A1%8C%E6%9B%B2%20wedding%20march/) |
-| `theme-christmas.mp3` | 平安夜 Silent Night（Lo-Fi 改编） | 传统（1818）· 公有领域 | tramp963 | [Pixabay 搜索页](https://pixabay.com/zh/music/search/%E5%B9%B3%E5%AE%89%E5%A4%9C%20silent%20night/) |
+| `theme-christmas.mp3` | 平安夜 Silent Night（Lo-Fi 改编） | 传统（1818）· 公有领域 | acoustic-group / tramp963 | [曲目页](https://pixabay.com/zh/music/acoustic-group-silent-night-lights-lo-fi-music-270153/) |
 | `birthday-theme.mp3` | Birthday 主题曲（站点主题曲） | — | 由项目作者提供 | 项目作者提供 |
 
 **说明与许可要点**
