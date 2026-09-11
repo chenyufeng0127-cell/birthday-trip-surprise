@@ -720,6 +720,7 @@ function builtinTracksHtml() {
       ).join("")}
     </div>
     <p class="b-hint">「整站使用」= 四个页面都用这首；之后仍可单独改某一页或某一站。</p>
+    <p class="b-hint" style="color:#a2563d">⚠️ 内置音乐来自 Pixabay，<b>仅限在本项目里使用</b>（向导试听 / 成品内嵌）。<b>请不要把这些音频文件单独提取出来做素材库、再分发或出售</b>；想要同款请到 Pixabay 自己下载。</p>
   </details>`;
 }
 
