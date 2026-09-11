@@ -105,6 +105,7 @@ const state = {
   aiMessages: [],
   lastAiJson: null,
   calibOpen: false, // 地图站点校准面板是否展开
+  audioList: [], // 已上传音乐的元信息（id / name / duration / size）
 };
 
 function loadDraft() {
@@ -146,12 +147,25 @@ function cfgToDraft(cfg) {
   draft.map = draft.map || {};
   draft.map.background = toRef(draft.map.background);
   if (!["pin", "card"].includes(draft.map.markerStyle)) draft.map.markerStyle = "pin";
+  /* 音乐：页面级 / 主题级 / 站点级（值可为内置主题名或音源引用） */
+  draft.music = draft.music || {};
+  draft.music.pages = draft.music.pages || {};
+  ["cover", "map", "memory", "finale"].forEach((k) => {
+    draft.music.pages[k] = toRef(draft.music.pages[k] || "");
+  });
+  draft.music.themes = draft.music.themes || {};
+  Object.keys(draft.music.themes).forEach((k) => {
+    draft.music.themes[k] = toRef(draft.music.themes[k] || "");
+  });
+  draft.music.links = draft.music.links || [];
   (draft.stops || []).forEach((stop) => {
     stop.image = toRef(stop.image);
     stop.icon = toRef(stop.icon);
     stop.iconRefs = (stop.iconRefs || []).map(toRef); // 贴纸收藏
     stop.imageRefs = (stop.imageRefs || []).map(toRef); // 章节大图图库
     stop.gallery = (stop.gallery || []).map(toRef);
+    if (typeof stop.music === "string") stop.music = toRef(stop.music);
+    else if (stop.music && typeof stop.music === "object") stop.music.src = toRef(stop.music.src);
     (stop.videos || []).forEach((v) => {
       v.src = toRef(v.src);
       v.poster = toRef(v.poster);
@@ -228,6 +242,13 @@ function blankDraft() {
     dayDates: {},
     stops: [],
     map: { background: "m:assets/map/map-seaside.webp", markerStyle: "pin" },
+    music: {
+      volume: 1,
+      fadeMs: 600,
+      pages: { cover: "", map: "", memory: "", finale: "" },
+      themes: {},
+      links: [],
+    },
   };
 }
 
@@ -474,6 +495,192 @@ function renderWelcome(body) {
   </div>`;
 }
 
+/* ---------- 音乐（自选音源：内置旋律 / 上传音频 / 外链） ---------- */
+
+const MUSIC_PAGE_LABELS = { cover: "封面", map: "地图", memory: "回忆册", finale: "终章" };
+
+/* 与 app.js 的 MUSIC_THEMES 键保持一致（内置合成旋律，零体积） */
+const MUSIC_THEME_LABELS = {
+  cover: "默认 · 海边轻音",
+  map: "地图 · 行进",
+  memory: "回忆册 · 温柔",
+  finale: "终章 · 惊喜",
+  cinema: "电影院",
+  hotpot: "火锅",
+  craft: "手作",
+  depart: "出发",
+  spa: "水光",
+  boat: "船",
+  bonfire: "篝火",
+  return: "返程",
+  gift: "礼物",
+  resort: "度假",
+  omakase: "料理",
+  dinner: "晚餐",
+};
+
+function audioDurationLabel(sec) {
+  if (!sec) return "时长未知";
+  const m = Math.floor(sec / 60);
+  const s = Math.round(sec % 60);
+  return m + ":" + String(s).padStart(2, "0");
+}
+
+function audioSizeLabel(bytes) {
+  if (!bytes) return "";
+  return bytes >= 1024 * 1024
+    ? (bytes / 1024 / 1024).toFixed(1) + " MB"
+    : Math.max(1, Math.round(bytes / 1024)) + " KB";
+}
+
+function audioListHtml() {
+  const list = state.audioList || [];
+  if (!list.length) {
+    return '<p class="b-hint" style="margin-top:8px">还没有上传音乐。上传后可以分配到封面 / 地图 / 回忆册 / 终章，也能分配到单个站点。</p>';
+  }
+  return `<div class="b-audio-list">${list
+    .map(
+      (a) => `<div class="b-audio-item">
+      <span class="b-audio-name">${esc(a.name)}</span>
+      <span class="b-audio-meta">${audioDurationLabel(a.duration)} · ${audioSizeLabel(a.size)}</span>
+      <button type="button" class="b-btn b-btn-sm b-btn-ghost" data-act="audio-preview" data-id="${esc(a.id)}">▶ 试听</button>
+      <button type="button" class="b-btn b-btn-sm b-btn-ghost" data-act="audio-del" data-id="${esc(a.id)}" title="删除这首">✕</button>
+    </div>`,
+    )
+    .join("")}</div>`;
+}
+
+function audioSelectHtml(path, current) {
+  const cur = current || "";
+  const opts = ['<optgroup label="内置合成旋律（零体积）">'];
+  opts.push(`<option value=""${cur === "" ? " selected" : ""}>跟随默认</option>`);
+  Object.entries(MUSIC_THEME_LABELS).forEach(([id, label]) => {
+    opts.push(`<option value="${id}"${cur === id ? " selected" : ""}>${esc(label)}</option>`);
+  });
+  opts.push("</optgroup>");
+  const list = state.audioList || [];
+  if (list.length) {
+    opts.push('<optgroup label="我上传的音乐">');
+    list.forEach((a) => {
+      const ref = "u:" + a.id;
+      opts.push(
+        `<option value="${esc(ref)}"${cur === ref ? " selected" : ""}>${esc(a.name)}（${audioDurationLabel(a.duration)}）</option>`,
+      );
+    });
+    opts.push("</optgroup>");
+  }
+  const links = (state.draft && state.draft.music && state.draft.music.links) || [];
+  if (links.length) {
+    opts.push('<optgroup label="外链音乐">');
+    links.forEach((url) => {
+      opts.push(
+        `<option value="${esc(url)}"${cur === url ? " selected" : ""}>${esc(url.slice(0, 42))}${url.length > 42 ? "…" : ""}</option>`,
+      );
+    });
+    opts.push("</optgroup>");
+  }
+  return `<select class="b-select" data-p="${path}">${opts.join("")}</select>`;
+}
+
+function musicSizeHint(d) {
+  const refs = new Set();
+  const collect = (v) => {
+    if (typeof v === "string" && v.startsWith("u:")) refs.add(v.slice(2));
+  };
+  const m = d.music || {};
+  Object.values(m.pages || {}).forEach(collect);
+  Object.values(m.themes || {}).forEach(collect);
+  (d.stops || []).forEach((s) => {
+    if (typeof s.music === "string") collect(s.music);
+    else if (s.music && typeof s.music === "object") collect(s.music.src);
+  });
+  if (!refs.size) return "当前用内置旋律，不占成品体积";
+  const byId = {};
+  (state.audioList || []).forEach((a) => {
+    byId[a.id] = a;
+  });
+  let total = 0;
+  refs.forEach((id) => {
+    total += (byId[id] && byId[id].size) || 0;
+  });
+  return `已用 ${refs.size} 首自定义音乐 · 合计约 ${audioSizeLabel(total)}（会内嵌进成品）`;
+}
+
+async function refreshAudioList() {
+  try {
+    state.audioList = await AudioLib.listAudios();
+  } catch (err) {
+    state.audioList = [];
+  }
+}
+
+async function handleAudioFiles(files) {
+  if (!files || !files.length) return;
+  toast("正在读取音乐…");
+  const res = await AudioLib.filesToAudios(files);
+  if (res.added.length) await refreshAudioList();
+  if (res.failed.length) {
+    toast(
+      "有文件没能加入：" + res.failed.map((f) => f.name + "（" + f.reason + "）").join("；"),
+    );
+  } else if (res.added.length) {
+    toast("已加入 " + res.added.length + " 首音乐，在下面的下拉里分配吧");
+  }
+  rerenderCurrent(true);
+}
+
+let audioPreviewEl = null;
+let audioPreviewId = "";
+
+async function previewAudio(id) {
+  const rec = await AudioLib.getAudio(id);
+  if (!rec || !rec.dataUrl) {
+    toast("这首音乐读不到了，请重新上传");
+    return;
+  }
+  if (audioPreviewEl && audioPreviewId === id && !audioPreviewEl.paused) {
+    audioPreviewEl.pause();
+    audioPreviewEl = null;
+    audioPreviewId = "";
+    rerenderCurrent(true);
+    toast("已停止试听");
+    return;
+  }
+  if (audioPreviewEl) audioPreviewEl.pause();
+  audioPreviewEl = new Audio(rec.dataUrl);
+  audioPreviewEl.volume = 0.85;
+  audioPreviewEl.play().catch(() => {});
+  audioPreviewId = id;
+  toast("试听中…再点一次同一个「试听」可停止");
+  rerenderCurrent(true);
+}
+
+async function deleteAudio(id) {
+  const d = state.draft;
+  const ref = "u:" + id;
+  if (d.music) {
+    Object.keys(d.music.pages || {}).forEach((k) => {
+      if (d.music.pages[k] === ref) d.music.pages[k] = "";
+    });
+    Object.keys(d.music.themes || {}).forEach((k) => {
+      if (d.music.themes[k] === ref) d.music.themes[k] = "";
+    });
+  }
+  (d.stops || []).forEach((s) => {
+    if (s.music === ref) delete s.music;
+    else if (s.music && typeof s.music === "object" && s.music.src === ref) delete s.music;
+  });
+  try {
+    await AudioLib.removeAudio(id);
+  } catch (err) {
+    /* ignore */
+  }
+  await refreshAudioList();
+  scheduleSave();
+  rerenderCurrent(true);
+  toast("已删除这首音乐，用到它的位置改回内置旋律了");
+}
+
 /* ---------- 第 1 步：主角与封面 ---------- */
 
 function renderBasic(body) {
@@ -594,6 +801,27 @@ function renderBasic(body) {
       <button type="button" class="b-btn b-btn-sm" data-act="calib-open">🎯 校准站点位置</button>
     </div>
     <div class="b-calib" id="calib-panel" ${state.calibOpen ? "" : "hidden"}>${state.calibOpen ? calibPanelHtml() : ""}</div>
+  </section>
+
+  <section class="b-card">
+    <h2>音乐（可选）</h2>
+    <p class="b-hint">给不同页面配不同音乐。不配置就用内置合成旋律——零文件、零体积；用上传或外链的音乐会更有个性。</p>
+    <div class="b-flex">
+      <button type="button" class="b-btn b-btn-sm" data-act="audio-upload">🎵 上传音乐（mp3 / m4a / wav）</button>
+      <input type="file" accept="audio/*" multiple hidden data-audio-file />
+      <span class="b-spacer"></span>
+      <span class="b-muted" style="font-size:12px">${musicSizeHint(d)}</span>
+    </div>
+    ${audioListHtml()}
+    <div class="b-row" style="margin-top:10px">
+      ${["cover", "map", "memory", "finale"]
+        .map(
+          (k) =>
+            `<div class="b-field"><label>${MUSIC_PAGE_LABELS[k]}</label>${audioSelectHtml("music.pages." + k, (d.music && d.music.pages && d.music.pages[k]) || "")}</div>`,
+        )
+        .join("")}
+    </div>
+    <p class="b-hint">上传的音乐保存在本机浏览器里，导出时会内嵌进成品文件；外链音乐则以网址形式保留（成品打开时需要联网）。</p>
   </section>`;
 }
 
@@ -1556,6 +1784,32 @@ async function draftToConfig(draft) {
     return ref;
   };
 
+  /* 音乐引用（与照片分开取：音频存在独立的音频库里） */
+  const audioRefs = new Set();
+  const collectAudio = (v) => {
+    if (typeof v === "string" && v.startsWith("u:")) audioRefs.add(v.slice(2));
+  };
+  const draftMusic = draft.music || {};
+  Object.values(draftMusic.pages || {}).forEach(collectAudio);
+  Object.values(draftMusic.themes || {}).forEach(collectAudio);
+  (draft.stops || []).forEach((s) => {
+    if (typeof s.music === "string") collectAudio(s.music);
+    else if (s.music && typeof s.music === "object") collectAudio(s.music.src);
+  });
+  const audioMap = {};
+  await Promise.all(
+    Array.from(audioRefs).map(async (id) => {
+      const rec = await AudioLib.getAudio(id);
+      if (rec && rec.dataUrl) audioMap[id] = rec.dataUrl;
+    }),
+  );
+  const resolveAudio = (ref) => {
+    if (!ref) return "";
+    if (ref.startsWith("m:")) return SRC.media[ref.slice(2)] || "";
+    if (ref.startsWith("u:")) return audioMap[ref.slice(2)] || "";
+    return ref;
+  };
+
   // 2. 组装成品 config
   const cfg = clone(draft);
   cfg.uid = cfg.uid || uid();
@@ -1598,7 +1852,49 @@ async function draftToConfig(draft) {
     if (!s.id) s.id = uid();
     delete s.iconRefs; // 收藏贴纸/图库只在编辑器里用，成品引擎只用 icon/image
     delete s.imageRefs;
+    /* 站点音乐：字符串（内置主题名或音源）或 { src, volume } */
+    if (typeof s.music === "string") {
+      const r = resolveAudio(s.music);
+      if (r) s.music = r;
+      else delete s.music;
+    } else if (s.music && typeof s.music === "object") {
+      const srcRef = s.music.src;
+      const vol = s.music.volume;
+      const r = resolveAudio(srcRef);
+      if (r) {
+        const out = { src: r };
+        if (typeof vol === "number") out.volume = Math.max(0, Math.min(1, vol));
+        s.music = out;
+      } else {
+        delete s.music;
+      }
+    }
   });
+
+  /* 音乐：只输出有内容的层级，未配置就完全不写（旧配置保持干净） */
+  const musicOut = {};
+  const pagesOut = {};
+  Object.entries(draftMusic.pages || {}).forEach(([k, v]) => {
+    const r = resolveAudio(v);
+    if (r) pagesOut[k] = r;
+  });
+  if (Object.keys(pagesOut).length) musicOut.pages = pagesOut;
+  const themesOut = {};
+  Object.entries(draftMusic.themes || {}).forEach(([k, v]) => {
+    const r = resolveAudio(v);
+    if (r) themesOut[k] = r;
+  });
+  if (Object.keys(themesOut).length) musicOut.themes = themesOut;
+  if (typeof draftMusic.volume === "number" && draftMusic.volume !== 1) {
+    musicOut.volume = Math.max(0, Math.min(1, draftMusic.volume));
+  }
+  if (typeof draftMusic.fadeMs === "number" && draftMusic.fadeMs !== 600) {
+    musicOut.fadeMs = Math.max(0, Math.min(4000, draftMusic.fadeMs));
+  }
+  if (Object.keys(musicOut).length) cfg.music = musicOut;
+  else delete cfg.music;
+  delete cfg.musicLinks;
+
   cfg.copy = cfg.copy && Object.keys(cfg.copy).length ? cfg.copy : defaultCopy();
   if (!["seaside", "forest", "starry", "newlywed", "christmas"].includes(cfg.theme)) cfg.theme = "seaside";
   delete cfg.days;
@@ -1798,6 +2094,11 @@ function onChange(e) {
     return;
   }
   if (t.type === "file") {
+    if (t.hasAttribute && t.hasAttribute("data-audio-file")) {
+      handleAudioFiles(t.files);
+      t.value = "";
+      return;
+    }
     handleUpload(t);
     return;
   }
@@ -2149,6 +2450,22 @@ async function onClick(e) {
         set.label +
         "」这对小人——封面落款与地图上沿路线走的都是他们",
     );
+    return;
+  }
+
+  if (act === "audio-upload") {
+    const input = document.querySelector("[data-audio-file]");
+    if (input) input.click();
+    return;
+  }
+
+  if (act === "audio-preview") {
+    previewAudio(btn.dataset.id);
+    return;
+  }
+
+  if (act === "audio-del") {
+    deleteAudio(btn.dataset.id);
     return;
   }
 
@@ -2701,6 +3018,10 @@ if (qParams.get("selftest") === "1") {
   bind();
   renderAll();
   updateStorageLabel();
+  // 已上传音乐列表（异步读取，读完刷新一次界面）
+  refreshAudioList().then(() => {
+    if ((state.audioList || []).length) rerenderCurrent(true);
+  });
   // 调试：?aitab=chat|inspiration|paste 直达 AI 子页
   const aitab = qParams.get("aitab");
   if (aitab && document.getElementById("ai-pane")) {

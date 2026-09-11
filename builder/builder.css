@@ -1042,3 +1042,38 @@ textarea.code {
   border-color: var(--bk-accent);
   background: rgba(201, 106, 130, 0.06);
 }
+
+/* ---------- 自选音乐列表 ---------- */
+.b-audio-list {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.b-audio-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--bk-line);
+  border-radius: 12px;
+  padding: 8px 10px;
+  background: #fff;
+}
+
+.b-audio-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--bk-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.b-audio-meta {
+  font-size: 11px;
+  color: var(--bk-muted);
+  white-space: nowrap;
+}

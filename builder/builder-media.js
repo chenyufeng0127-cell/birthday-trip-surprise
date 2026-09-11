@@ -30,14 +30,18 @@
         reject(new Error("浏览器不支持 IndexedDB"));
         return;
       }
-      const req = indexedDB.open(DB_NAME, 1);
+      const req = indexedDB.open(DB_NAME, 2);
       req.onupgradeneeded = () => {
         if (!req.result.objectStoreNames.contains(STORE)) {
           req.result.createObjectStore(STORE, { keyPath: "id" });
         }
+        // v2 新增：自选音乐的音频库（音频体积大，独立 store 便于单独清理）
+        if (!req.result.objectStoreNames.contains("audios")) {
+          req.result.createObjectStore("audios", { keyPath: "id" });
+        }
       };
       req.onsuccess = () => resolve(req.result);
-      req.onerror = () => reject(req.error || new Error("打开照片库失败"));
+      req.onerror = () => reject(req.error || new Error("打开本地素材库失败"));
     });
     return dbPromise;
   }
@@ -261,6 +265,172 @@
   function modeLabel(m) {
     return MODE_LABEL[m] || m;
   }
+
+  /* ---------------- 音频（自选音乐） ----------------
+   * 一首歌通常 3-5MB，localStorage 那约 5MB 的额度装不下，
+   * 因此音频只保存在 IndexedDB（或内存：仅本次会话）；外链地址不占存储。 */
+
+  const STORE_AUDIO = "audios";
+  const AUDIO_MAX_BYTES = 15 * 1024 * 1024;
+  const AUDIO_EXT_OK = /\.(mp3|m4a|aac|wav|ogg|oga|opus|flac)$/i;
+
+  function fileToAudioDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.onerror = () => reject(new Error("读取音频失败"));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  /* 读时长（秒），失败返回 0 */
+  function audioDuration(src) {
+    return new Promise((resolve) => {
+      let settled = false;
+      const done = (v) => {
+        if (settled) return;
+        settled = true;
+        resolve(v);
+      };
+      try {
+        const a = new Audio();
+        a.preload = "metadata";
+        a.addEventListener("loadedmetadata", () =>
+          done(Number.isFinite(a.duration) ? Math.round(a.duration) : 0),
+        );
+        a.addEventListener("error", () => done(0));
+        a.src = src;
+        setTimeout(() => done(0), 8000);
+      } catch (err) {
+        done(0);
+      }
+    });
+  }
+
+  async function addAudio(dataUrl, meta) {
+    const id = newId();
+    const m = await detectMode();
+    const rec = {
+      id,
+      dataUrl,
+      name: (meta && meta.name) || "未命名音乐",
+      size: (meta && meta.size) || Math.round((dataUrl.length * 3) / 4),
+      type: (meta && meta.type) || "",
+      duration: (meta && meta.duration) || 0,
+    };
+    if (m === "idb") {
+      const db = await openDb();
+      const tx = db.transaction(STORE_AUDIO, "readwrite");
+      tx.objectStore(STORE_AUDIO).put(rec);
+      await new Promise((resolve, reject) => {
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error);
+      });
+      return id;
+    }
+    if (m === "memory") {
+      memStore[id] = rec;
+      return id;
+    }
+    throw new Error(
+      "当前浏览器环境不允许大容量本地存储，音乐无法保存在本机。可改用「外链音频地址」（https://…），或换 Chrome / Edge 的普通窗口打开本页",
+    );
+  }
+
+  async function getAudio(id) {
+    const m = await detectMode();
+    if (m === "idb") {
+      const db = await openDb();
+      const result = await reqDone(
+        db.transaction(STORE_AUDIO, "readonly").objectStore(STORE_AUDIO).get(id),
+      );
+      return result || null;
+    }
+    return memStore[id] || null;
+  }
+
+  async function removeAudio(id) {
+    const m = await detectMode();
+    if (m === "idb") {
+      const db = await openDb();
+      await reqDone(
+        db.transaction(STORE_AUDIO, "readwrite").objectStore(STORE_AUDIO).delete(id),
+      );
+      return;
+    }
+    delete memStore[id];
+  }
+
+  async function listAudios() {
+    const m = await detectMode();
+    if (m === "idb") {
+      const db = await openDb();
+      const rows = await reqDone(
+        db.transaction(STORE_AUDIO, "readonly").objectStore(STORE_AUDIO).getAll(),
+      );
+      return (rows || []).map((r) => ({
+        id: r.id,
+        name: r.name || "未命名音乐",
+        size: r.size || 0,
+        duration: r.duration || 0,
+      }));
+    }
+    return Object.keys(memStore)
+      .map((k) => memStore[k])
+      .filter((r) => r && typeof r === "object" && r.dataUrl)
+      .map((r) => ({
+        id: r.id,
+        name: r.name || "未命名音乐",
+        size: r.size || 0,
+        duration: r.duration || 0,
+      }));
+  }
+
+  async function filesToAudios(fileList) {
+    const files = Array.from(fileList || []);
+    const added = [];
+    const failed = [];
+    for (const file of files) {
+      const looksAudio =
+        (file.type && file.type.indexOf("audio/") === 0) || AUDIO_EXT_OK.test(file.name);
+      if (!looksAudio) {
+        failed.push({ name: file.name, reason: "不是音频文件（支持 mp3 / m4a / wav / ogg）" });
+        continue;
+      }
+      if (file.size > AUDIO_MAX_BYTES) {
+        failed.push({
+          name: file.name,
+          reason: "文件超过 15MB，会明显拖慢成品；建议压到 128kbps 或剪短到 1 分钟左右",
+        });
+        continue;
+      }
+      try {
+        const dataUrl = await fileToAudioDataUrl(file);
+        const duration = await audioDuration(dataUrl);
+        const id = await addAudio(dataUrl, {
+          name: file.name.replace(/\.[^.]+$/, ""),
+          size: file.size,
+          type: file.type,
+          duration,
+        });
+        added.push(id);
+      } catch (err) {
+        failed.push({ name: file.name, reason: String((err && err.message) || err) });
+      }
+    }
+    return { added, failed };
+  }
+
+  w.AudioLib = {
+    addAudio,
+    getAudio,
+    removeAudio,
+    listAudios,
+    filesToAudios,
+    fileToAudioDataUrl,
+    audioDuration,
+    MAX_BYTES: AUDIO_MAX_BYTES,
+  };
 
   w.PhotoLib = {
     addPhoto,
