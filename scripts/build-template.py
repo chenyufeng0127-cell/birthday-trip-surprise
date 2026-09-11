@@ -25,9 +25,11 @@ MEDIA_DIRS = [
     "assets/icons",
     "assets/map",
     "assets/avatars",
+    "assets/music",
     "assets/photos/sample",
 ]
-MEDIA_EXTS = {".webp", ".png", ".jpg", ".jpeg", ".svg", ".gif"}
+MEDIA_EXTS = {".webp", ".png", ".jpg", ".jpeg", ".svg", ".gif", ".mp3", ".m4a", ".wav", ".ogg"}
+AUDIO_EXTS = {".mp3", ".m4a", ".wav", ".ogg"}
 
 
 def load_text(rel: str) -> str:
@@ -54,6 +56,10 @@ def media_map() -> dict:
                 ".jpeg": "image/jpeg",
                 ".svg": "image/svg+xml",
                 ".gif": "image/gif",
+                ".mp3": "audio/mpeg",
+                ".m4a": "audio/mp4",
+                ".wav": "audio/wav",
+                ".ogg": "audio/ogg",
             }[f.suffix.lower()]
             b64 = base64.b64encode(f.read_bytes()).decode("ascii")
             out[rel] = f"data:{mime};base64,{b64}"

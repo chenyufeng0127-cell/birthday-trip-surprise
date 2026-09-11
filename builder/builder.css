@@ -1077,3 +1077,36 @@ textarea.code {
   color: var(--bk-muted);
   white-space: nowrap;
 }
+
+/* ---------- 折叠区块（主题级音乐等进阶设置） ---------- */
+.b-fold {
+  border: 1px solid var(--bk-line);
+  border-radius: 12px;
+  padding: 8px 10px;
+  background: #fffdfa;
+}
+
+.b-fold > summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--bk-ink);
+  list-style: none;
+}
+
+.b-fold > summary::-webkit-details-marker {
+  display: none;
+}
+
+.b-fold > summary::before {
+  content: "▸ ";
+  color: var(--bk-accent);
+}
+
+.b-fold[open] > summary::before {
+  content: "▾ ";
+}
+
+.b-fold > *:not(summary) {
+  margin-top: 8px;
+}

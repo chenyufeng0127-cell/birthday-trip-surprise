@@ -499,6 +499,15 @@ function renderWelcome(body) {
 
 const MUSIC_PAGE_LABELS = { cover: "封面", map: "地图", memory: "回忆册", finale: "终章" };
 
+/* 内置背景音乐（自研、随项目发布；与主题一一配套） */
+const THEME_BGM = {
+  seaside: "m:assets/music/theme-seaside.mp3",
+  forest: "m:assets/music/theme-forest.mp3",
+  starry: "m:assets/music/theme-starry.mp3",
+  newlywed: "m:assets/music/theme-newlywed.mp3",
+  christmas: "m:assets/music/theme-christmas.mp3",
+};
+
 /* 与 app.js 的 MUSIC_THEMES 键保持一致（内置合成旋律，零体积） */
 const MUSIC_THEME_LABELS = {
   cover: "默认 · 海边轻音",
@@ -590,6 +599,17 @@ function audioSelectHtml(path, current) {
     opts.push(`<option value="${id}"${cur === id ? " selected" : ""}>${esc(label)}</option>`);
   });
   opts.push("</optgroup>");
+  const bgm = THEMES.filter((t) => THEME_BGM[t.id]);
+  if (bgm.length) {
+    opts.push('<optgroup label="内置背景音乐（自研 · 免版权）">');
+    bgm.forEach((t) => {
+      const ref = THEME_BGM[t.id];
+      opts.push(
+        `<option value="${esc(ref)}"${cur === ref ? " selected" : ""}>${esc(t.label)} · 主题 BGM</option>`,
+      );
+    });
+    opts.push("</optgroup>");
+  }
   const list = state.audioList || [];
   if (list.length) {
     opts.push('<optgroup label="我上传的音乐">');
@@ -858,7 +878,17 @@ function renderBasic(body) {
         )
         .join("")}
     </div>
-    <p class="b-hint">上传的音乐保存在本机浏览器里，导出时会内嵌进成品文件；外链音乐则以网址形式保留（成品打开时需要联网）。</p>
+    <details class="b-fold" style="margin-top:10px">
+      <summary>按风格配套音乐（主题级）</summary>
+      <p class="b-hint">这里配好后，页面上级没单独指定时就用「当前风格」那一首，切换风格会跟着换；选风格时若这里是空的，会自动配上对应的内置 BGM。</p>
+      <div class="b-row">
+        ${THEMES.map(
+          (t) =>
+            `<div class="b-field"><label>${esc(t.label)}</label>${audioSelectHtml("music.themes." + t.id, (d.music && d.music.themes && d.music.themes[t.id]) || "")}</div>`,
+        ).join("")}
+      </div>
+    </details>
+    <p class="b-hint">上传的音乐保存在本机浏览器里，导出时会内嵌进成品文件；外链音乐以网址形式保留（成品打开时需联网）。内置 BGM 与内置旋律都不占你的存储。</p>
   </section>`;
 }
 
@@ -2466,9 +2496,20 @@ async function onClick(e) {
     }
     scheduleSave();
     rerenderCurrent(true); // 同步地图背景选择区等界面
+    // 音乐：该风格还没配过 → 自动配上对应的内置 BGM（已手动选过则保留）
+    const m = state.draft.music || (state.draft.music = {});
+    m.themes = m.themes || {};
+    let musicTied = false;
+    if (picked && THEME_BGM[picked.id] && m.themes[picked.id] === undefined) {
+      m.themes[picked.id] = THEME_BGM[picked.id];
+      musicTied = true;
+      scheduleSave();
+    }
     toast(
       "风格已切换为「" + (picked ? picked.label : "") +
-        "」——已配套" + (picked && picked.mapBg && isDefaultBg ? "地图背景，" : "") +
+        "」——已配套" + (picked && picked.mapBg && isDefaultBg ? "地图背景" : "") +
+        (musicTied ? (picked && picked.mapBg && isDefaultBg ? "与背景音乐" : "背景音乐") : "") +
+        (picked && picked.mapBg && isDefaultBg ? "，" : "") +
         "到「预览与导出」查看效果",
     );
     return;
@@ -2897,6 +2938,19 @@ async function runE2E() {
       })
       .map((i) => (i.getAttribute("src") || "").slice(0, 70)),
     engineErrors: doc.__tripErrors || [],
+    /* 音乐：配置里的音源应被解析成可直接播放的地址（内置素材 → dataURL 内嵌） */
+    music: (() => {
+      const m = cfg.music || {};
+      const pick = (m.pages && m.pages.cover) || (m.themes && m.themes.seaside) || "";
+      if (!pick) return { configured: false };
+      return {
+        configured: true,
+        embedded: pick.indexOf("data:audio") === 0,
+        https: /^https?:/.test(pick),
+        length: pick.length,
+      };
+    })(),
+    htmlBytes: new Blob([html]).size,
   };
   const pre = document.createElement("pre");
   pre.id = "builder-e2e-report";
