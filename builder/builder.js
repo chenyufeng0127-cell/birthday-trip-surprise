@@ -520,11 +520,11 @@ const BIRTHDAY_THEME_SONG = "m:assets/music/birthday-theme.mp3";
 /* 内置曲库（向导里可逐个试听）：theme 表示它配套哪套风格 */
 const BUILTIN_TRACKS = [
   { id: "birthday", ref: BIRTHDAY_THEME_SONG, label: "Birthday 主题曲", note: "生日向导的主题曲 · 推荐整站使用", seconds: 81, theme: null },
-  { id: "seaside", ref: THEME_BGM.seaside, label: "海边暖沙", note: "柔和轻快", seconds: 30, theme: "seaside" },
-  { id: "forest", ref: THEME_BGM.forest, label: "森林", note: "安静治愈", seconds: 30, theme: "forest" },
-  { id: "starry", ref: THEME_BGM.starry, label: "星光夜", note: "夜色温柔", seconds: 30, theme: "starry" },
-  { id: "newlywed", ref: THEME_BGM.newlywed, label: "新婚燕尔", note: "明亮喜悦", seconds: 30, theme: "newlywed" },
-  { id: "christmas", ref: THEME_BGM.christmas, label: "圣诞颂歌", note: "铃铛暖冬", seconds: 30, theme: "christmas" },
+  { id: "seaside", ref: THEME_BGM.seaside, label: "海边暖沙 · 卡农 Canon in D", note: "帕赫贝尔 · 轻快优雅", seconds: 75, theme: "seaside" },
+  { id: "forest", ref: THEME_BGM.forest, label: "森林 · 轻快爵士 Ragtime", note: "Alex Morgan · 散步般的节奏", seconds: 75, theme: "forest" },
+  { id: "starry", ref: THEME_BGM.starry, label: "星光夜 · 月光 Clair de Lune", note: "德彪西 · 夜色钢琴", seconds: 75, theme: "starry" },
+  { id: "newlywed", ref: THEME_BGM.newlywed, label: "新婚燕尔 · 婚礼进行曲", note: "门德尔松曲 · 爵士改编", seconds: 33, theme: "newlywed" },
+  { id: "christmas", ref: THEME_BGM.christmas, label: "圣诞颂歌 · 平安夜 Silent Night", note: "传统圣诞曲 · Lo-Fi 改编", seconds: 75, theme: "christmas" },
 ];
 
 /* 判断一个值是否为「音频音源引用」（而非内置旋律主题名） */
