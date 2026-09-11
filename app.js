@@ -190,9 +190,9 @@ function showView(name) {
     el.setAttribute("aria-hidden", String(!active));
   });
   state.view = name;
-  if (name === "cover") MusicBox.setTheme("cover");
-  if (name === "map") MusicBox.setTheme("map");
-  if (name === "memory") MusicBox.setTheme("memory");
+  if (name === "cover") MusicBox.playFor("cover");
+  if (name === "map") MusicBox.playFor("map");
+  if (name === "memory") MusicBox.playFor("memory");
   window.scrollTo(0, 0);
 }
 
@@ -526,7 +526,7 @@ function renderChapter(index) {
       .join("");
   }
 
-  MusicBox.setTheme(stop.music || stop.id);
+  MusicBox.playFor("stop", stop);
 }
 
 /* ---------- 终章 ---------- */
@@ -540,7 +540,7 @@ function renderFinale() {
   text("finale-name", HERO.name);
   text("finale-btn", state.finaleOpened ? "礼物就在你面前，慢慢打开吧" : stop.action);
   $("finale-note").hidden = !state.finaleOpened;
-  MusicBox.setTheme("finale");
+  MusicBox.playFor("finale");
 }
 
 /* ---------- 流程 ---------- */
@@ -1018,6 +1018,48 @@ function rollDice() {
   }, 90);
 }
 
+/* ---------- 音乐配置：自定义音源（文件/外链）+ 内置合成旋律 ---------- */
+
+const MUSIC_CFG = CFG.music || {};
+/* 一个「音源引用」：内置素材 m:assets/... / 用户上传 u:xxx / 外链 https://… / dataURL */
+const MUSIC_REF_RE = /^(m:|u:|https?:|data:|blob:)/;
+
+function musicIsRef(v) {
+  return typeof v === "string" && MUSIC_REF_RE.test(v);
+}
+
+function musicUrl(ref) {
+  return ref.startsWith("m:") ? ref.slice(2) : ref;
+}
+
+/* 三层优先级：站点级 > 页面级 > 主题级 > 内置默认
+ * 站点级：stop.music —— 字符串（内置主题名，或 m:/https/dataURL 音源）或 { src, theme, volume }
+ * 页面级：config.music.pages  —— { cover, map, memory, finale }
+ * 主题级：config.music.themes —— { seaside, forest, starry, newlywed, christmas } */
+function resolveMusic(kind, stop, cfgOverride) {
+  const C = cfgOverride || MUSIC_CFG;
+  const pages = C.pages || {};
+  const themes = C.themes || {};
+  const asConf = (v, fallbackTheme) => {
+    if (musicIsRef(v)) return { src: v };
+    if (typeof v === "string" && v) return { theme: v };
+    return { theme: fallbackTheme };
+  };
+
+  if (stop && stop.music) {
+    const m = stop.music;
+    if (m && typeof m === "object") {
+      if (m.src && musicIsRef(m.src)) return { src: m.src, volume: m.volume };
+      if (m.theme) return { theme: m.theme, volume: m.volume };
+    } else if (typeof m === "string") {
+      return asConf(m, stop.id);
+    }
+  }
+  if (pages[kind]) return asConf(pages[kind], kind);
+  if (themes[THEME_ID]) return asConf(themes[THEME_ID], kind);
+  return { theme: stop ? stop.id : kind };
+}
+
 const MusicBox = (() => {
   let ctx = null;
   let timer = null;
@@ -1026,12 +1068,28 @@ const MusicBox = (() => {
   let currentThemeId = "cover";
   let theme = MUSIC_THEMES[currentThemeId];
   let delayNode = null;
+  let master = null; // 合成通道总音量（用于淡入淡出）
+  let synthFade = null;
+
+  /* 音频文件通道（自定义音乐）：单例 audio 元素，循环播放 */
+  let audioEl = null;
+  let currentAudioSrc = "";
+  let audioFade = null;
+  let wantPlaying = false; // 用户是否已经打开音乐（点击按钮后为 true）
+  let lastKind = "cover";
+  let lastStop = null;
+  const fadeMs = Number(MUSIC_CFG.fadeMs) >= 0 ? Number(MUSIC_CFG.fadeMs) : 600;
+  const baseVolume =
+    typeof MUSIC_CFG.volume === "number" ? Math.max(0, Math.min(1, MUSIC_CFG.volume)) : 1;
 
   function ensureContext() {
     if (!ctx) {
       const AC = window.AudioContext || window.webkitAudioContext;
       if (AC) {
         ctx = new AC();
+        master = ctx.createGain();
+        master.gain.value = 0;
+        master.connect(ctx.destination);
         delayNode = ctx.createDelay(1);
         delayNode.delayTime.value = 0.26;
         const feedback = ctx.createGain();
@@ -1041,7 +1099,7 @@ const MusicBox = (() => {
         delayNode.connect(feedback);
         feedback.connect(delayNode);
         delayNode.connect(wet);
-        wet.connect(ctx.destination);
+        wet.connect(master);
       }
     }
     return ctx;
@@ -1057,7 +1115,7 @@ const MusicBox = (() => {
     gain.gain.linearRampToValueAtTime(vol || 0.1, time + 0.04);
     gain.gain.exponentialRampToValueAtTime(0.001, time + dur);
     osc.connect(gain);
-    gain.connect(ctx.destination);
+    gain.connect(master || ctx.destination);
     if (delayNode) gain.connect(delayNode);
     osc.start(time);
     osc.stop(time + dur + 0.08);
@@ -1094,32 +1152,183 @@ const MusicBox = (() => {
     }
   }
 
-  return {
-    setTheme(id) {
-      const next = MUSIC_THEMES[id] || MUSIC_THEMES.cover;
-      if (id === currentThemeId) return;
-      currentThemeId = id;
-      theme = next;
-      step = 0;
-      beatPosition = 0;
-      if (timer) {
-        stop();
-        tick();
+  /* ---------- 音量淡入淡出 ---------- */
+
+  function fadeSynthTo(target, ms) {
+    if (synthFade) {
+      clearInterval(synthFade);
+      synthFade = null;
+    }
+    if (!master) return;
+    const from = master.gain.value;
+    if (!ms) {
+      master.gain.value = target;
+      return;
+    }
+    const t0 = Date.now();
+    synthFade = setInterval(() => {
+      const k = Math.min(1, (Date.now() - t0) / ms);
+      master.gain.value = from + (target - from) * k;
+      if (k >= 1) {
+        clearInterval(synthFade);
+        synthFade = null;
       }
+    }, 30);
+  }
+
+  function fadeAudioTo(target, ms, done) {
+    if (audioFade) {
+      clearInterval(audioFade);
+      audioFade = null;
+    }
+    if (!audioEl) {
+      if (done) done();
+      return;
+    }
+    const from = audioEl.volume;
+    const t = Math.max(0, Math.min(1, target));
+    if (!ms) {
+      audioEl.volume = t;
+      if (done) done();
+      return;
+    }
+    const t0 = Date.now();
+    audioFade = setInterval(() => {
+      const k = Math.min(1, (Date.now() - t0) / ms);
+      audioEl.volume = Math.max(0, Math.min(1, from + (t - from) * k));
+      if (k >= 1) {
+        clearInterval(audioFade);
+        audioFade = null;
+        if (done) done();
+      }
+    }, 30);
+  }
+
+  /* ---------- 音频文件通道（自定义音源） ---------- */
+
+  function ensureAudio() {
+    if (audioEl) return audioEl;
+    audioEl = new Audio();
+    audioEl.loop = true;
+    audioEl.preload = "auto";
+    audioEl.volume = 0;
+    audioEl.addEventListener("error", () => {
+      // 音源加载失败：静默回退内置合成旋律，不打断体验
+      currentAudioSrc = "";
+      const fallback = resolveMusic(lastKind, lastStop);
+      setThemeNow(fallback.theme || "cover");
+      if (wantPlaying) startSynth();
+      syncMusicButtons();
+    });
+    return audioEl;
+  }
+
+  function playFile(src, volume) {
+    const el = ensureAudio();
+    const switched = currentAudioSrc !== src;
+    const target = Math.max(
+      0,
+      Math.min(1, baseVolume * (typeof volume === "number" ? volume : 1)),
+    );
+    if (switched) {
+      currentAudioSrc = src;
+      el.src = musicUrl(src);
+      el.volume = 0;
+    }
+    const p = el.play();
+    if (p && typeof p.catch === "function") p.catch(() => {});
+    fadeAudioTo(target, switched ? Math.min(fadeMs, 400) : fadeMs);
+  }
+
+  function stopFile(ms, done) {
+    if (!audioEl || !currentAudioSrc) {
+      if (done) done();
+      return;
+    }
+    const el = audioEl;
+    fadeAudioTo(0, ms, () => {
+      el.pause();
+      currentAudioSrc = "";
+      if (done) done();
+    });
+  }
+
+  function setThemeNow(id) {
+    const next = MUSIC_THEMES[id] || MUSIC_THEMES.cover;
+    if (id === currentThemeId) return;
+    currentThemeId = id;
+    theme = next;
+    step = 0;
+    beatPosition = 0;
+    if (timer) {
+      stop();
+      tick();
+    }
+  }
+
+  function startSynth() {
+    if (!ensureContext()) return;
+    if (ctx.state === "suspended") ctx.resume();
+    if (timer) return;
+    master.gain.value = 0;
+    fadeSynthTo(1, fadeMs);
+    tick();
+  }
+
+  function stopSynth(ms) {
+    if (!timer) {
+      if (master) master.gain.value = 0;
+      return;
+    }
+    const t = timer;
+    timer = null;
+    fadeSynthTo(0, ms);
+    window.setTimeout(() => {
+      if (!timer || timer === t) clearTimeout(t);
+    }, (ms || 0) + 80);
+  }
+
+  /* 应用一份音乐配置：有自定义音源走文件通道，否则回退内置合成 */
+  function apply(conf) {
+    if (!wantPlaying) return;
+    if (conf.src) {
+      stopSynth(Math.min(fadeMs, 400));
+      playFile(conf.src, conf.volume);
+      return;
+    }
+    stopFile(Math.min(fadeMs, 300));
+    setThemeNow(conf.theme || "cover");
+    startSynth();
+  }
+
+  return {
+    /* 统一入口：kind = cover | map | memory | finale | stop（站点传 stop 对象） */
+    playFor(kind, stop) {
+      lastKind = kind;
+      lastStop = stop || null;
+      const conf = resolveMusic(kind, stop);
+      conf.kind = kind;
+      if (!wantPlaying) return; // 用户还没打开音乐：仅记录配置，等点击按钮
+      apply(conf);
     },
     toggle() {
-      if (!ensureContext()) return false;
-      if (timer) {
-        stop();
+      if (wantPlaying) {
+        wantPlaying = false;
+        stopSynth(fadeMs);
+        stopFile(fadeMs);
       } else {
-        if (ctx.state === "suspended") ctx.resume();
-        tick();
+        wantPlaying = true;
+        const conf = resolveMusic(lastKind, lastStop);
+        apply(conf);
       }
       syncMusicButtons();
-      return Boolean(timer);
+      return wantPlaying;
     },
     get playing() {
-      return Boolean(timer);
+      return wantPlaying;
+    },
+    get themeId() {
+      return currentThemeId;
     },
   };
 })();
@@ -1175,7 +1384,7 @@ function bindEvents() {
   $("map-memory-link").addEventListener("click", () => showView("memory"));
   $("map-home-btn").addEventListener("click", () => {
     showView("cover");
-    MusicBox.setTheme("cover");
+    MusicBox.playFor("cover");
   });
   $("memory-back-btn").addEventListener("click", () => {
     renderMap();
@@ -1252,6 +1461,31 @@ if (params.get("selftest") === "1") {
       imagesLoaded: Array.from(document.images)
         .filter((img) => img.getAttribute("src"))
         .every((img) => img.complete && img.naturalWidth > 0),
+      /* 音乐三层优先级（站点级 > 页面级 > 主题级 > 内置默认） */
+      music: (() => {
+        try {
+          const fake = {
+            pages: { cover: "https://example.com/a.mp3", map: "cover" },
+            themes: { [THEME_ID]: "m:assets/music/builtin.mp3" },
+          };
+          const pageRef = resolveMusic("cover", null, fake);
+          const pageThemeName = resolveMusic("map", null, fake);
+          const themeFallback = resolveMusic("memory", null, fake);
+          const stopThemeName = resolveMusic("stop", { id: "s1", music: "craft" }, fake);
+          const stopObject = resolveMusic("stop", { id: "s2", music: { src: "u:abc" } }, fake);
+          const stopWins = resolveMusic("cover", { id: "s3", music: "u:xyz" }, fake);
+          const ok =
+            pageRef.src === "https://example.com/a.mp3" &&
+            pageThemeName.theme === "cover" &&
+            themeFallback.src === "m:assets/music/builtin.mp3" &&
+            stopThemeName.theme === "craft" &&
+            stopObject.src === "u:abc" &&
+            stopWins.src === "u:xyz";
+          return { ok, themeFallback: themeFallback.src, stopWins: stopWins.src };
+        } catch (e) {
+          return { ok: false, error: String(e) };
+        }
+      })(),
       errors: window.__tripErrors || [],
     };
     const el = document.createElement("pre");
