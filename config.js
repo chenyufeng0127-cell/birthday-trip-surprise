@@ -227,7 +227,28 @@ window.TRIP_CONFIG = {
   ],
 
   /* ================================================================
-   * ④ 地图（可选配置）
+   * ④ 音乐（可选配置）
+   *    pages：封面 / 地图 / 回忆册 / 终章 各自播放什么。
+   *      留空 "" = 用内置合成旋律（零体积）；也可以写内置 BGM 或你自己的音频：
+   *      "assets/music/birthday-theme.mp3"（内置生日主题曲）
+   *      "assets/music/theme-forest.mp3" （森林主题 BGM，另有 seaside/starry/newlywed/christmas）
+   *      "assets/photos/我的歌.mp3"      （自己放进仓库的音频）
+   *      "https://…/music.mp3"           （外链，成品打开时需联网）
+   *    themes：按风格配套（切换主题时用哪一首），优先级低于上面的 pages。
+   *    volume / fadeMs：音量与切页淡入淡出（毫秒），不写就是 1 和 600。
+   *    每个站点也可以单独用 stops[].music 指定。
+   * ============================================================== */
+  music: {
+    pages: {
+      cover: "assets/music/birthday-theme.mp3",
+      map: "assets/music/birthday-theme.mp3",
+      memory: "assets/music/birthday-theme.mp3",
+      finale: "assets/music/birthday-theme.mp3",
+    },
+  },
+
+  /* ================================================================
+   * ⑤ 地图（可选配置）
    *    positions：每个站一个点 {x, y}，取值 0-100，是地图上的百分比位置。
    *    没有配置背景图时，地图会自动按纵向排列站点；配置了背景图后，
    *    建议手动摆放点位让它们落在背景的风景上。

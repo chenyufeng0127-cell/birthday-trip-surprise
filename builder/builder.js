@@ -245,7 +245,13 @@ function blankDraft() {
     music: {
       volume: 1,
       fadeMs: 600,
-      pages: { cover: "", map: "", memory: "", finale: "" },
+      // 默认整站使用「Birthday 主题曲」（同一首只内嵌一份，成品不会翻倍）
+      pages: {
+        cover: "m:assets/music/birthday-theme.mp3",
+        map: "m:assets/music/birthday-theme.mp3",
+        memory: "m:assets/music/birthday-theme.mp3",
+        finale: "m:assets/music/birthday-theme.mp3",
+      },
       themes: {},
       links: [],
     },
@@ -499,7 +505,7 @@ function renderWelcome(body) {
 
 const MUSIC_PAGE_LABELS = { cover: "封面", map: "地图", memory: "回忆册", finale: "终章" };
 
-/* 内置背景音乐（自研、随项目发布；与主题一一配套） */
+/* 内置背景音乐（自研/授权，随项目发布；与主题一一配套） */
 const THEME_BGM = {
   seaside: "m:assets/music/theme-seaside.mp3",
   forest: "m:assets/music/theme-forest.mp3",
@@ -507,6 +513,24 @@ const THEME_BGM = {
   newlywed: "m:assets/music/theme-newlywed.mp3",
   christmas: "m:assets/music/theme-christmas.mp3",
 };
+
+/* 生日主题曲：整站的默认背景音乐（也可换成任意其它音源） */
+const BIRTHDAY_THEME_SONG = "m:assets/music/birthday-theme.mp3";
+
+/* 内置曲库（向导里可逐个试听）：theme 表示它配套哪套风格 */
+const BUILTIN_TRACKS = [
+  { id: "birthday", ref: BIRTHDAY_THEME_SONG, label: "Birthday 主题曲", note: "生日向导的主题曲 · 推荐整站使用", seconds: 81, theme: null },
+  { id: "seaside", ref: THEME_BGM.seaside, label: "海边暖沙", note: "柔和轻快", seconds: 30, theme: "seaside" },
+  { id: "forest", ref: THEME_BGM.forest, label: "森林", note: "安静治愈", seconds: 30, theme: "forest" },
+  { id: "starry", ref: THEME_BGM.starry, label: "星光夜", note: "夜色温柔", seconds: 30, theme: "starry" },
+  { id: "newlywed", ref: THEME_BGM.newlywed, label: "新婚燕尔", note: "明亮喜悦", seconds: 30, theme: "newlywed" },
+  { id: "christmas", ref: THEME_BGM.christmas, label: "圣诞颂歌", note: "铃铛暖冬", seconds: 30, theme: "christmas" },
+];
+
+/* 判断一个值是否为「音频音源引用」（而非内置旋律主题名） */
+function musicIsAudioRef(v) {
+  return typeof v === "string" && /^(m:|u:|https?:|data:|blob:)/.test(v);
+}
 
 /* 与 app.js 的 MUSIC_THEMES 键保持一致（内置合成旋律，零体积） */
 const MUSIC_THEME_LABELS = {
@@ -599,13 +623,12 @@ function audioSelectHtml(path, current) {
     opts.push(`<option value="${id}"${cur === id ? " selected" : ""}>${esc(label)}</option>`);
   });
   opts.push("</optgroup>");
-  const bgm = THEMES.filter((t) => THEME_BGM[t.id]);
-  if (bgm.length) {
-    opts.push('<optgroup label="内置背景音乐（自研 · 免版权）">');
-    bgm.forEach((t) => {
-      const ref = THEME_BGM[t.id];
+  if (BUILTIN_TRACKS.length) {
+    opts.push('<optgroup label="内置背景音乐（可试听）">');
+    BUILTIN_TRACKS.forEach((t) => {
+      const tag = t.id === "birthday" ? "主题曲" : "主题 BGM";
       opts.push(
-        `<option value="${esc(ref)}"${cur === ref ? " selected" : ""}>${esc(t.label)} · 主题 BGM</option>`,
+        `<option value="${esc(t.ref)}"${cur === t.ref ? " selected" : ""}>${esc(t.label)} · ${tag}</option>`,
       );
     });
     opts.push("</optgroup>");
@@ -656,6 +679,65 @@ function musicSizeHint(d) {
     total += (byId[id] && byId[id].size) || 0;
   });
   return `已用 ${refs.size} 首自定义音乐 · 合计约 ${audioSizeLabel(total)}（会内嵌进成品）`;
+}
+
+/* 内置曲库试听：不用上传、不用 Key，点一下就能听，方便挑歌 */
+function builtinTracksHtml() {
+  return `<details class="b-fold" style="margin-top:10px">
+    <summary>内置音乐试听（点 ▶ 听，选中意的可直接整站使用）</summary>
+    <div class="b-audio-list">
+      ${BUILTIN_TRACKS.map(
+        (t) => `<div class="b-audio-item">
+        <span class="b-audio-name">${esc(t.label)}${t.id === "birthday" ? " ⭐" : ""}</span>
+        <span class="b-audio-meta">${esc(t.note)} · ${audioDurationLabel(t.seconds)}</span>
+        <button type="button" class="b-btn b-btn-sm b-btn-ghost" data-act="bgm-preview" data-ref="${esc(t.ref)}">▶ 试听</button>
+        <button type="button" class="b-btn b-btn-sm" data-act="bgm-apply-all" data-ref="${esc(t.ref)}">整站使用</button>
+      </div>`,
+      ).join("")}
+    </div>
+    <p class="b-hint">「整站使用」= 四个页面都用这首；之后仍可单独改某一页或某一站。</p>
+  </details>`;
+}
+
+let builtinPreviewEl = null;
+let builtinPreviewRef = "";
+
+function previewBuiltin(ref) {
+  const src = SRC.media[ref.startsWith("m:") ? ref.slice(2) : ref];
+  if (!src) {
+    toast("这首内置音乐没打包进来，请重新运行 scripts/build-template.py");
+    return;
+  }
+  if (builtinPreviewEl && builtinPreviewRef === ref && !builtinPreviewEl.paused) {
+    builtinPreviewEl.pause();
+    builtinPreviewEl = null;
+    builtinPreviewRef = "";
+    rerenderCurrent(true);
+    toast("已停止试听");
+    return;
+  }
+  if (builtinPreviewEl) builtinPreviewEl.pause();
+  builtinPreviewEl = new Audio(src);
+  builtinPreviewEl.volume = 0.9;
+  builtinPreviewEl.play().catch(() => {});
+  builtinPreviewRef = ref;
+  const t = BUILTIN_TRACKS.find((x) => x.ref === ref);
+  toast("试听中：" + (t ? t.label : "内置音乐") + "（再点一次可停止）");
+  rerenderCurrent(true);
+}
+
+/* 一键把某首曲子设为整站背景音乐（四个页面） */
+function applyBuiltinToAll(ref) {
+  const d = state.draft;
+  d.music = d.music || {};
+  d.music.pages = d.music.pages || {};
+  ["cover", "map", "memory", "finale"].forEach((k) => {
+    d.music.pages[k] = ref;
+  });
+  scheduleSave();
+  rerenderCurrent(true);
+  const t = BUILTIN_TRACKS.find((x) => x.ref === ref);
+  toast("已把「" + (t ? t.label : "这首") + "」设为整站背景音乐（四个页面）");
 }
 
 async function refreshAudioList() {
@@ -865,6 +947,7 @@ function renderBasic(body) {
       <span class="b-muted" style="font-size:12px">${musicSizeHint(d)}</span>
     </div>
     ${audioListHtml()}
+    ${builtinTracksHtml()}
     <div class="b-flex" style="margin-top:8px">
       <input class="b-input" style="flex:1;min-width:0" data-audio-link placeholder="也可以填外链音频地址 https://…/music.mp3" />
       <button type="button" class="b-btn b-btn-sm" data-act="audio-link-add">🔗 添加外链</button>
@@ -1880,6 +1963,24 @@ async function draftToConfig(draft) {
     return ref;
   };
 
+  /* 音源去重表：同一首歌用在多个位置只内嵌一份（位置写 "src:s1"） */
+  const srcTable = {};
+  const srcIndex = {};
+  let srcSeq = 0;
+  const putSrc = (ref) => {
+    const val = resolveAudio(ref);
+    if (!val) return "";
+    if (!musicIsAudioRef(val)) return val; // 内置旋律主题名，原样保留
+    let key = srcIndex[val];
+    if (!key) {
+      srcSeq += 1;
+      key = "s" + srcSeq;
+      srcIndex[val] = key;
+      srcTable[key] = val;
+    }
+    return "src:" + key;
+  };
+
   // 2. 组装成品 config
   const cfg = clone(draft);
   cfg.uid = cfg.uid || uid();
@@ -1941,20 +2042,23 @@ async function draftToConfig(draft) {
     }
   });
 
-  /* 音乐：只输出有内容的层级，未配置就完全不写（旧配置保持干净） */
+  /* 音乐：只输出有内容的层级，未配置就完全不写（旧配置保持干净）
+   * 同一首歌用在多个位置时只内嵌一份：music.sources = { s1: "data:audio/…" }，
+   * 各位置写 "src:s1"，避免成品体积按引用次数翻倍。 */
   const musicOut = {};
   const pagesOut = {};
   Object.entries(draftMusic.pages || {}).forEach(([k, v]) => {
-    const r = resolveAudio(v);
+    const r = putSrc(v);
     if (r) pagesOut[k] = r;
   });
   if (Object.keys(pagesOut).length) musicOut.pages = pagesOut;
   const themesOut = {};
   Object.entries(draftMusic.themes || {}).forEach(([k, v]) => {
-    const r = resolveAudio(v);
+    const r = putSrc(v);
     if (r) themesOut[k] = r;
   });
   if (Object.keys(themesOut).length) musicOut.themes = themesOut;
+  if (Object.keys(srcTable).length) musicOut.sources = srcTable;
   if (typeof draftMusic.volume === "number" && draftMusic.volume !== 1) {
     musicOut.volume = Math.max(0, Math.min(1, draftMusic.volume));
   }
@@ -2540,6 +2644,16 @@ async function onClick(e) {
     return;
   }
 
+  if (act === "bgm-preview") {
+    previewBuiltin(btn.dataset.ref);
+    return;
+  }
+
+  if (act === "bgm-apply-all") {
+    applyBuiltinToAll(btn.dataset.ref);
+    return;
+  }
+
   if (act === "audio-link-add") {
     const input = document.querySelector("[data-audio-link]");
     const url = ((input && input.value) || "").trim();
@@ -2938,16 +3052,27 @@ async function runE2E() {
       })
       .map((i) => (i.getAttribute("src") || "").slice(0, 70)),
     engineErrors: doc.__tripErrors || [],
-    /* 音乐：配置里的音源应被解析成可直接播放的地址（内置素材 → dataURL 内嵌） */
+    /* 音乐：位置引用应经音源表解析成可播放地址；同一首只内嵌一份 */
     music: (() => {
       const m = cfg.music || {};
+      const table = m.sources || {};
       const pick = (m.pages && m.pages.cover) || (m.themes && m.themes.seaside) || "";
       if (!pick) return { configured: false };
+      const resolved = pick.indexOf("src:") === 0 ? table[pick.slice(4)] || "" : pick;
+      const slots = []
+        .concat(Object.values(m.pages || {}), Object.values(m.themes || {}))
+        .filter(Boolean);
+      const refs = new Set(
+        slots.filter((v) => v.indexOf("src:") === 0).map((v) => v.slice(4)),
+      );
       return {
         configured: true,
-        embedded: pick.indexOf("data:audio") === 0,
-        https: /^https?:/.test(pick),
-        length: pick.length,
+        dedupRef: pick.indexOf("src:") === 0,
+        sources: Object.keys(table).length,
+        usedRefs: refs.size,
+        dedupOk: refs.size === Object.keys(table).length,
+        embedded: resolved.indexOf("data:audio") === 0,
+        resolvedLength: resolved.length,
       };
     })(),
     htmlBytes: new Blob([html]).size,

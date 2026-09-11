@@ -1032,6 +1032,16 @@ function musicUrl(ref) {
   return ref.startsWith("m:") ? ref.slice(2) : ref;
 }
 
+/* 音源表引用：music.sources = { s1: "data:audio/…" }，位置写 "src:s1"
+ * —— 同一首歌用在多个页面/站点时，只内嵌一份，成品体积不会翻倍。 */
+function musicDeref(v, C) {
+  if (typeof v === "string" && v.indexOf("src:") === 0) {
+    const table = (C || MUSIC_CFG).sources || {};
+    return table[v.slice(4)] || "";
+  }
+  return v;
+}
+
 /* 三层优先级：站点级 > 页面级 > 主题级 > 内置默认
  * 站点级：stop.music —— 字符串（内置主题名，或 m:/https/dataURL 音源）或 { src, theme, volume }
  * 页面级：config.music.pages  —— { cover, map, memory, finale }
@@ -1041,15 +1051,17 @@ function resolveMusic(kind, stop, cfgOverride) {
   const pages = C.pages || {};
   const themes = C.themes || {};
   const asConf = (v, fallbackTheme) => {
-    if (musicIsRef(v)) return { src: v };
-    if (typeof v === "string" && v) return { theme: v };
+    const val = musicDeref(v, C);
+    if (musicIsRef(val)) return { src: val };
+    if (typeof val === "string" && val) return { theme: val };
     return { theme: fallbackTheme };
   };
 
   if (stop && stop.music) {
     const m = stop.music;
     if (m && typeof m === "object") {
-      if (m.src && musicIsRef(m.src)) return { src: m.src, volume: m.volume };
+      const src = musicDeref(m.src, C);
+      if (src && musicIsRef(src)) return { src: src, volume: m.volume };
       if (m.theme) return { theme: m.theme, volume: m.volume };
     } else if (typeof m === "string") {
       return asConf(m, stop.id);
@@ -1467,6 +1479,8 @@ if (params.get("selftest") === "1") {
           const fake = {
             pages: { cover: "https://example.com/a.mp3", map: "cover" },
             themes: { [THEME_ID]: "m:assets/music/builtin.mp3" },
+            /* 音源表去重：同一首歌多处引用只内嵌一份 */
+            sources: { s1: "data:audio/mpeg;base64,AAAA" },
           };
           const pageRef = resolveMusic("cover", null, fake);
           const pageThemeName = resolveMusic("map", null, fake);
@@ -1474,14 +1488,16 @@ if (params.get("selftest") === "1") {
           const stopThemeName = resolveMusic("stop", { id: "s1", music: "craft" }, fake);
           const stopObject = resolveMusic("stop", { id: "s2", music: { src: "u:abc" } }, fake);
           const stopWins = resolveMusic("cover", { id: "s3", music: "u:xyz" }, fake);
+          const shared = resolveMusic("memory", null, { sources: fake.sources, pages: { memory: "src:s1" } });
           const ok =
             pageRef.src === "https://example.com/a.mp3" &&
             pageThemeName.theme === "cover" &&
             themeFallback.src === "m:assets/music/builtin.mp3" &&
             stopThemeName.theme === "craft" &&
             stopObject.src === "u:abc" &&
-            stopWins.src === "u:xyz";
-          return { ok, themeFallback: themeFallback.src, stopWins: stopWins.src };
+            stopWins.src === "u:xyz" &&
+            shared.src === "data:audio/mpeg;base64,AAAA";
+          return { ok, themeFallback: themeFallback.src, stopWins: stopWins.src, sharedSrc: shared.src.slice(0, 22) };
         } catch (e) {
           return { ok: false, error: String(e) };
         }
